@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+html(lang="en")
+    head
+        meta(charset="UTF-8")
+        title Jeu
+    body
+        p Avatar de #{pseudo}
+        #start
+            button Commencer
+        #question
+            p Définition : #{definition}
+            p #{wordObfuscated}    
+            p
+                | Votre réponse : 
+                input(id="reponse" type="text", name="reponse")
+
+        script(src="http://192.168.105.80:8080/socket.io/socket.io.js")
+        script(src="index.js")

@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+html(lang="en")
+    head
+        meta(charset="UTF-8")
+        title Accueil
+    body
+        form#login(action="/login", method="POST")
+            p
+                | Pseudo : 
+                input(type="text", name="pseudo")
+            p
+                | Mot de passe : 
+                input(type="password", name="pwd")
+            p
+                input(type="submit", value="Envoyer")
+        #jouer
+            button jouer
+        script(src="http://192.168.105.80:8080/socket.io/socket.io.js")
+        script(src="index.js")

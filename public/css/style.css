@@ -1,0 +1,20 @@
+body {
+  background-color: darkslategray;
+  color: antiquewhite;
+}
+body.erreur {
+  background-color: darkred;
+}
+
+.erreur {
+  color: red;
+  font-weight: bold;
+}
+.info {
+  color: yellow;
+  font-weight: bold;
+}
+
+#jouer {
+  visibility: hidden;
+}
