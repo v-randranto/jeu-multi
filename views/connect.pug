@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+html(lang="en")
+    head
+        meta(charset="UTF-8")
+        title Accueil   
+        link(rel="stylesheet", href="css/style.css")     
+    body
+        
+        #login
+            form(id="loginForm" action="/login", method="POST")
+                p Pseudo : 
+                    input(type="text", name="pseudo")
+                p Mot de passe : 
+                    input(type="text", name="pwd")
+                p 
+                    input(type="submit", value="Envoyer")
+                .error
+                    p=msgError  
+                .infos
+                    p=msgInfos           
+            button(id="registerBtn") S'enregistrer
+        
+        #register    
+            form(id="registerForm" action="/register", method="POST")
+                p Pseudo : 
+                    input(type="text", name="pseudo")
+                p Mot de passe : 
+                    input(type="text", name="pwd")
+                p Confirmation mot de passe : 
+                    input(type="text", name="confirm")
+                p 
+                    input(type="submit", value="Envoyer")
+                .error
+                    p=msgError  
+                .infos
+                    p=msgInfos          
+            button(id="loginBtn") Se connecter
+
+        script(src="../js/connect.js")

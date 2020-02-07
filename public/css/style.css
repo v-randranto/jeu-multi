@@ -18,6 +18,6 @@ button {
   margin: 20px;
 }
 
-#gamesList, #question {
-  visibility: hidden;
+#register, #gamesOverview, #question,#sessionOtherId {
+  display: none;
 }

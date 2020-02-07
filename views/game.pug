@@ -5,15 +5,18 @@ html(lang="en")
         title Jeu
         link(rel="stylesheet", href="css/style.css") 
     body
+        a(href="/logout") Déconnexionocalho
         #gameIntro 
+            - var sessionOtherId = otherId
             p Bonjour #{pseudo}!
             p Présentation du jeu bla bla bla
-            button(id="playBtn") Jouer 
+            form(id="playForm")
+                    input(type="text", name="sessionOtherId", id="sessionOtherId", value=sessionOtherId)               
+                    input(type="submit", value="Jouer")
 
-        #gamesList
-            p dernières parties jouées 
-            p parties en cours
-            p parties ouvertes     
+        #gamesOverview
+            p(id="gamesList") 
+            p(id="connectedPlayers") 
 
             button(id="initGameBtn") Initier une partie
             button(id="enterGameBtn") Participer à une partie
@@ -32,6 +35,5 @@ html(lang="en")
             p(id="result")
             p(id="answerFound")
 
-
         script(src="http://localhost:8080/socket.io/socket.io.js")
-        script(src="../js/jeu.js")
+        script(src="../js/game.js")
