@@ -1,8 +1,7 @@
 "use strict";
-/*
+/* 
  * Partie HTTP avec Express
  */
-const path = require("path");
 const express = require("express");
 const connectMongo = require("connect-mongo");
 const expressSession = require("express-session");
@@ -32,26 +31,13 @@ app.set('view engine', 'pug');
  */
 app.use(expressSession(options));
 app.use(bodyParser.urlencoded({ extended: false }));
-app.use(express.static(public)); 
+app.use(express.static('public'));
 // app.use('/css', express.static(__dirname + '/public/css'));
-// app.use('/image', express.static(__dirname + '/public/image'));
+// app.use('/img', express.static(__dirname + '/public/img'));
+//app.use('/js', express.static(__dirname + '/public/js'));
 
 let interpolations = {}; // objet contenant les variables d'interpolation des fichiers .pug
 let userConnected;
-
-/* traitements communs aux routes  */
-app.use('/someRoute', (req, res, next) => {
-	console.log('> app.use /someRoute ', req.originalUrl)
-	//contrôle si utilisateur déjà connecté 
-	if (userConnected) {
-		console.log('> déjà connecté');
-		app.locals.msgInfo = "Vous êtes déjà connecté.e";
-		res.redirect(301, '/accueil');
-		return;
-	}
-	interpolations = titres.page('page', interpolations);
-	next();
-});
 
 app.all('/', function (req, res) {
   console.log('>app.use / ', req.originalUrl)
@@ -59,9 +45,8 @@ app.all('/', function (req, res) {
   res.render('index', interpolations);
 });
 
-
-
 app.post('/login', function (req, res) {
+  console.log('> /login');
   interpolations.pseudo = req.body.pseudo
   // accès DB pour rechercher le pseudo dans la collection 'users'
   // si trouvé contrôle du mot de passe
@@ -73,13 +58,13 @@ app.post('/login', function (req, res) {
  * Gestion des erreurs http
  */
 app.use(function (req, res, next) {
-	console.log('>app.use final ', req.originalUrl)
-	console.log('res.statusCode : ', res.statusCode);
-	interpolations = titres.erreur(res.statusCode);
-	if (res.statusCode != 403 && res.statusCode != 503) {
-		res.statusCode = 404;
-	}
-	res.render('erreur', interpolations);
+  console.log('>app.use final ', req.originalUrl)
+  console.log('res.statusCode : ', res.statusCode);
+  interpolations = titres.erreur(res.statusCode);
+  if (res.statusCode != 403 && res.statusCode != 503) {
+    res.statusCode = 404;
+  }
+  res.render('erreur', interpolations);
 });
 
 const HTTPServer = app.listen(8080, function () {
@@ -91,18 +76,70 @@ const HTTPServer = app.listen(8080, function () {
  */
 
 const io = require("socket.io");
-const ioServer = io(httpServer);
+const ioServer = io(HTTPServer);
+
+const gamesInProgress = [];
+const connectedPlayers = [];
+
+
 
 ioServer.on("connect", function (ioSocket) {
 
-  // On envoit les propriétés du carré du client à TOUS les clients :
-  ioServer.emit("salutServeur", "Bienvenue");
+  // ajout de l'utilisateurs dans la tables des joueurs connectés
+  //
+  // création d'une partie :
+  // - ajout dans la table des parties en cours 'gamesInProgress'
+  //
+  // La partie peut commencer quand il y au moins 2 participants
+  // - création de la partie en base, 
+  // - création d'un objet tour attaché à la partie
+  // - récupération du mot à deviner dans la collection "dictionnary" et envoi de celui-ci aux joueurs
+  // - le 1er qui répond gagne le point
+  // - On boucle sur la création de tours jusqu'à ce qu'il soit mis fin à la partie
+  //
+  // Quand la partie est finie et on fait la somme des scores de chacun. Celui qui a le plus de points a gagné
+  // - mise à jour de la partie en base avec les scores de chacun
+  // - la partie est supprimée de la tables "gamesInProgress"
+  
+  // quand le dernier tour est terminé, faire le total de score de chacun des joueurs et mettre à jour la collection "games"
+  const dicoSelection = {
+    word : "abort",
+    definition : "Interrompre un process."
+  }
+  const question = {  
+    wordLength : dicoSelection.word.length,
+    definition : dicoSelection.definition
+  }
+  
+  ioSocket.on("createGame", function (createGameObject) {
+    console.log("> server create game")
+    // création d'une partie avec en 1er joueur celui qui l'a initié 
+    // pour le test je sers la question ici. TODO à supprimer
+   
+    ioServer.emit("question", question ); // à supprimer 
+  });
+  ioSocket.on("enterGame", function (addPlayer) {
+    // ajout du 2è joueur à une partie
+    // création d'un tour avec un mot à deviner
+    // servir la question au client 
+    
+    ioServer.emit("question", question);
+  });  
 
-  ioSocket.on("newMouseCoordinates", function (mouseCoordinates) {
+  ioSocket.on("answer", function (answer) {
     // du code
+    const result = { 
+      status: false,
+      message: "Mauvaise réponse"
+    };
 
-    // On envoie les propriétés du carré mises à jour à TOUS les clients
-    ioServer.emit("updateClientSquare", square);
+    if (answer.toUpperCase() === dicoSelection.word.toUpperCase()) {
+      //terminer le tour : annoncer le gagnant, enregistrer le tour, créer un nouveau tour
+      result.status = true;
+      result.message = "Bonne réponse !"; 
+      result.scores = {}     
+    }
+    ioServer.emit("answerChecked", result);
   });
 
   ioSocket.on("disconnect", function () {

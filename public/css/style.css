@@ -14,7 +14,10 @@ body.erreur {
   color: yellow;
   font-weight: bold;
 }
+button {
+  margin: 20px;
+}
 
-#jouer {
+#gamesList, #question {
   visibility: hidden;
 }

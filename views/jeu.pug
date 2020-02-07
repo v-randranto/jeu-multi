@@ -3,16 +3,34 @@ html(lang="en")
     head
         meta(charset="UTF-8")
         title Jeu
+        link(rel="stylesheet", href="css/style.css") 
     body
-        p Avatar de #{pseudo}
-        #start
-            button Commencer
-        #question
-            p Définition : #{definition}
-            p #{wordObfuscated}    
-            p
-                | Votre réponse : 
-                input(id="reponse" type="text", name="reponse")
+        #gameIntro 
+            p Bonjour #{pseudo}!
+            p Présentation du jeu bla bla bla
+            button(id="playBtn") Jouer 
 
-        script(src="http://192.168.105.80:8080/socket.io/socket.io.js")
-        script(src="index.js")
+        #gamesList
+            p dernières parties jouées 
+            p parties en cours
+            p parties ouvertes     
+
+            button(id="initGameBtn") Initier une partie
+
+        #question 
+            p Score de chacun
+            p Tour n°
+            p(id="wordLength")
+            p(id="definition")
+        
+            form(id="answerForm")
+                p Votre réponse : 
+                    input(type="text", name="answer" )
+                p 
+                    input(type="submit", value="Envoyer")
+            p(id="result")
+            p(id="answerFound")
+
+
+        script(src="http://localhost:8080/socket.io/socket.io.js")
+        script(src="../js/jeu.js")
