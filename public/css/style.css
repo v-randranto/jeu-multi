@@ -2,11 +2,11 @@ body {
   background-color: darkslategray;
   color: antiquewhite;
 }
-body.erreur {
+body.error {
   background-color: darkred;
 }
 
-.erreur {
+.error {
   color: red;
   font-weight: bold;
 }
