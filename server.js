@@ -6,8 +6,8 @@ const express = require("express");
 const expressSession = require("express-session");
 const MongoStore = require("connect-mongo")(expressSession);
 const bodyParser = require('body-parser');
-const uuidv4 = require('uuid/v4');
 
+const connectUser = require('./connect-user')
 const dbQuery = require('./db-manager');
 const titres = require('./titres');
 const tool = require('./tools');
@@ -16,12 +16,6 @@ const app = express();
 /* Template engine */
 app.set('view engine', 'pug');
 
-const users = [
-  { pseudo: 'Véro', pwd: '1234' },
-  { pseudo: 'Toche', pwd: '1234' },
-  { pseudo: 'Riton', pwd: '1234' },
-  { pseudo: 'Mioum', pwd: '1234' }
-];
 
 /**
  *  Middlewares 
@@ -39,17 +33,9 @@ const options = {
 };
 
 app.use(expressSession(options));
+
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static('public'));
-
-
-// app.use((req, res, next) => {
-//   if (req.cookies.session && !req.session.pseudo) {
-//     console.log('> req.cookies.session && !req.session.pseudo ')
-//     res.clearCookie('session');
-//   }
-//   next();
-// });
 
 let interpolations = {}; // objet contenant les variables d'interpolation des fichiers .pug
 app.use(function (req, res, next) {
@@ -67,77 +53,51 @@ app.all('/', function (req, res) {
 app.post('/login', function (req, res) {
   console.log('> /login');
 
-  // User already connected
-  if (req.session.pseudo) {
-    console.log('> session existante pour ', req.session.pseudo)
-    res.render('game', interpolations);
-  } else {
-    console.log('> pas de session en cours ')
-    // accès DB pour rechercher le pseudo dans la collection 'users'   
-    // si trouvé contrôle du mot de passe
-    // si mot de passe ok alors création d'une session et envoi de la page game 
-    // TODO Code de test à supprimer
-    let userFound = false;
-    let validCredentials = false;
-    users.forEach(function (user) {
-      if (user.pseudo === req.body.pseudo) {
-        userFound = true;
-        if (user.pwd === req.body.pwd) {
-          validCredentials = true;
-          return;
+  connectUser.connect({
+    session: req.session,
+    body: req.body,
+    interpolations: interpolations,
+    done: function (result, err) {
+      // User already connected
+      if (result.alreadyConnected) {
+        res.render('game', interpolations);
+      } else {
+        if (result.validCredentials) {
+          res.render('game', interpolations);
+        } else {
+          res.render('connect', interpolations);  // TODO faire un redirect ????
         }
       }
-    });
 
-    if (validCredentials) {
-      console.log('> contrôle identifiants OK')
-      req.session.pseudo = req.body.pseudo;
-      req.session.otherId = uuidv4();
-      console.log("req session uuid ", req.session.otherId);
-      interpolations.pseudo = req.body.pseudo;
-      interpolations.otherId = req.session.otherId;
-      res.render('game', interpolations);
-    } else {
-      console.log('> contrôle identifiants KO')
-      interpolations.login = true;
-      interpolations.msgError = "Vos identifiants sont incorrects"
-      res.render('connect', interpolations);  // TODO faire un redirect ????
     }
-  }
+  });
+
+
 
 })
 
 // User registering
 app.post('/register', function (req, res) {
   console.log('> /register');
-  // User already connected
-  if (req.session.pseudo) {
-    console.log('> session existante pour ', req.session.pseudo)
-    res.render('game', interpolations);
-  } else {
-    console.log('> pas de session en cours ')
-    // contrôle lot de passe et confirmation 
-    // si mot de passe ok alors création d'une session et envoi de la page game 
-    // TODO Code de test à supprimer
-    if (req.body.pwd === req.body.confirm) {
-      console.log('> contrôle identifiants OK');
-      users.push({
-        pseudo: req.body.pseudo,
-        pwd: req.body.pwd
-      });
-      req.session.pseudo = req.body.pseudo;
-      req.session.otherId = uuidv4();
-      console.log("req session uuid ", req.session.otherId);
-      interpolations.pseudo = req.body.pseudo;
-      interpolations.otherId = req.session.otherId;
-      res.render('game', interpolations);
-    } else {
-      console.log('> contrôle identifiants KO');
-      interpolations.register = true;
-      interpolations.msgError = "Votre mot de passe et sa confirmation sont différents"
-      res.render('connect', interpolations);  // TODO faire un redirect ????
+
+  connectUser.connect({
+    session: req.session,
+    body: req.body,
+    interpolations: interpolations,
+    done: function (result, err) {
+      // User already connected
+      if (result.alreadyConnected) {
+        res.render('game', interpolations);
+      } else {
+        if (result.validCredentials) {
+          res.render('game', interpolations);
+        } else {
+          res.render('connect', interpolations);  // TODO faire un redirect ????
+        }
+      }
+
     }
-  }
+  });
 
 })
 app.all('/logout', function (req, res) {

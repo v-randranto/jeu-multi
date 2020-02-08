@@ -1,13 +1,12 @@
 const MongoClient = require('mongodb').MongoClient;
 
 const urlDb = 'mongodb://localhost:27017';
-//const dbName = 'chat';
+const dbName = 'jeu-back';
 
 connectDb = (callback) => {
   MongoClient.connect(urlDb, { useUnifiedTopology: true }, (err, client) => {
     if (err) return;
-    //const db = client.db(dbName);
-    const db = client.db(parameters.dbName);
+    const db = client.db(dbName);    
     callback(db, client);
   });
 };
