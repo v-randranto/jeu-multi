@@ -43,19 +43,29 @@ app.use(function (req, res, next) {
   next();
 });
 
-app.all('/', function (req, res) {
+app.all('/', function (req, res, next) {
   console.log('>app.use / ', req.originalUrl)
   //interpolations = titres.page('accueil', interpolations);
+  // contrôler la session
+  if (req.session) {
+    if (req.session.pseudo) {
+      console.log(req.session.pseudo, ' déjà connecté')
+      interpolations.pseudo = req.session.pseudo;
+      res.render('game', interpolations);
+      return;
+    }
+  }
   res.render('connect', interpolations);
 });
 
 // User login
 app.post('/login', function (req, res) {
   console.log('> /login');
-
+  interpolations.login = true;
   connectUser.connect({
     session: req.session,
     body: req.body,
+    login: true,
     interpolations: interpolations,
     done: function (result, err) {
       // User already connected
@@ -79,10 +89,11 @@ app.post('/login', function (req, res) {
 // User registering
 app.post('/register', function (req, res) {
   console.log('> /register');
-
+  interpolations.register = true;
   connectUser.connect({
     session: req.session,
     body: req.body,
+    register: true,
     interpolations: interpolations,
     done: function (result, err) {
       // User already connected
@@ -106,7 +117,7 @@ app.all('/logout', function (req, res) {
     req.session.destroy();
     res.clearCookie('sid');
     //interpolations = titres.page('accueil', interpolations);
-    interpolations.msgInfos = "Vous êtes déconnecté.e";
+    interpolations.msgInfo = "Vous êtes déconnecté.e";
     res.render('connect', interpolations);
   };
 });

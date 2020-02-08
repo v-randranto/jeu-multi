@@ -6,6 +6,10 @@ html(lang="en")
         link(rel="stylesheet", href="css/style.css")     
     body
         
+        div                    
+            p(class="msg error")=msgError             
+            p(class="msg info")=msgInfos 
+        
         #login
             form(id="loginForm" action="/login", method="POST")
                 p Pseudo : 
@@ -14,11 +18,8 @@ html(lang="en")
                     input(type="text", name="pwd")
                 p 
                     input(type="submit", value="Envoyer")
-                .error
-                    p=msgError  
-                .infos
-                    p=msgInfos           
-            button(id="registerBtn") S'enregistrer
+                   
+            button(id="registerBtn") Vous n'avez pas encore de compte
         
         #register    
             form(id="registerForm" action="/register", method="POST")
@@ -30,10 +31,7 @@ html(lang="en")
                     input(type="text", name="confirm")
                 p 
                     input(type="submit", value="Envoyer")
-                .error
-                    p=msgError  
-                .infos
-                    p=msgInfos          
-            button(id="loginBtn") Se connecter
+  
+            button(id="loginBtn") Vous avez déjà un compte
 
         script(src="../js/connect.js")

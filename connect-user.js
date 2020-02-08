@@ -2,13 +2,6 @@
 const dbQuery = require('./db-manager');
 const uuidv4 = require('uuid/v4');
 
-const users = [
-  { pseudo: 'Véro', pwd: '1234' },
-  { pseudo: 'Toche', pwd: '1234' },
-  { pseudo: 'Riton', pwd: '1234' },
-  { pseudo: 'Mioum', pwd: '1234' }
-];
-
 const createSession = function (parameters) {
   parameters.session.pseudo = parameters.body.pseudo;
   parameters.session.otherId = uuidv4();
@@ -22,7 +15,7 @@ exports.connect = function (parameters) {
   // User already connected
   if (parameters.session.pseudo) {
     result.alreadyConnected = true;
-    console.log('> exports : session existante pour ', parameters.session.pseudo)
+    console.log('> exports : session existante pour ', parameters.session.pseudo);
     parameters.done(result);
   } else {
 
@@ -43,10 +36,11 @@ exports.connect = function (parameters) {
         result.validCredentials = false;
 
         // cas d'un login
-        if (!parameters.session.confirm) {          
-
+        if (parameters.login) {
+          console.log('> exports : login')
           if (userFound) {
             if (userFound.pwd === parameters.body.pwd) {
+              console.log('> login : identifiants OK')
               createSession(parameters);
               result.validCredentials = true;
               parameters.done(result);
@@ -54,43 +48,34 @@ exports.connect = function (parameters) {
             }
 
           }
-          console.log('> exports : contrôle identifiants KO')
-          parameters.interpolations.login = true;
+          console.log('> login : identifiants KO')
           parameters.interpolations.msgError = "Vos identifiants sont incorrects.";
 
         } else {
           // cas d'un register
-          if (userFound) {
-            parameters.interpolations.register = true;
+          console.log('> exports : register')
+          parameters.interpolations.register = true;
+          if (userFound) {  
+            console.log('> register : pseudo déjà pris');          
             parameters.interpolations.msgError = "Le pseudo déjà utilisé.";
             parameters.done(result);
             return;
           }
 
           if (parameters.body.pwd === parameters.body.confirm) {
-            console.log('> contrôle identifiants OK');
-            users.push({
-              pseudo: parameters.body.pseudo,
-              pwd: parameters.body.pwd
-            });
+            console.log('> register : identifiants OK');
             createSession(parameters);
             result.validCredentials = false;
-            
+
           } else {
-            console.log('> contrôle identifiants KO');
-            interpolations.register = true;
-            interpolations.msgError = "Votre mot de passe et sa confirmation sont différents";
+            console.log('> register : identifiants KO');
+            parameters.interpolations.msgError = "Votre mot de passe et sa confirmation sont différents";
           }
         }
         parameters.done(result);
-
       }
     });
-
-
   }
-
-
 
 };
 
