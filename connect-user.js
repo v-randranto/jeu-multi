@@ -24,6 +24,8 @@ exports.connect = function (parameters) {
   dbQuery.find({
     collectionName: 'users',
     filter: { pseudo: parameters.body.pseudo },
+    sort: {},
+    limit: 0,
     done: (data, err) => {
       // si trouvé contrôle du mot de passe
       // si mot de passe ok alors création d'une session et envoi de la page game 

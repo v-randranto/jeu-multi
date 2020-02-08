@@ -15,7 +15,7 @@ exports.find = (parameters) => {
   console.log('>find : ', parameters)
   connectDb((db, client) => {
     const collection = db.collection(parameters.collectionName);
-    collection.find(parameters.filter).toArray((err, data) => {      
+    collection.find(parameters.filter).sort(parameters.sort).limit(parameters.limit).toArray((err, data) => {      
       client.close();
       parameters.done(data, err);
     });

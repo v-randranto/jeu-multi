@@ -17,6 +17,9 @@ body.error {
 button {
   margin: 20px;
 }
+a {
+  color: antiquewhite;
+}
 
 #register, #gamesOverview, #question,#sessionOtherId {
   display: none;

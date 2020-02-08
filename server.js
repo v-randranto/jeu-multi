@@ -141,18 +141,13 @@ const HTTPServer = app.listen(8080, function () {
 const ioServer = require("socket.io")(HTTPServer);
 //const ioServer = io(HTTPServer);
 
-const gamesList = [
-  { name: 'Vero' },
-  { name: 'Riton' }
-];
-const gameRooms = [
-  { name: 'Toche', status: 'playing' },
-  { name: 'Mioum', status: 'available' }
-]
-const connections = [
-  { pseudo: 'Vero', status: 'playing' },
-  { pseudo: 'Toche', status: 'available' }
-];
+const lists = {
+  gameRooms: [
+    { name: 'Toche', status: 'playing' },
+    { name: 'Mioum', status: 'available' }
+  ],
+  connections: []
+}
 
 ioServer.on("connect", function (ioSocket) {
   // ioServer.emit => à tout le monde
@@ -162,31 +157,27 @@ ioServer.on("connect", function (ioSocket) {
   // ioSocket.to('some room').emit('some event') => emission vers les participants d'une salle
   // ioSocket.leave('some room');
 
-  //envoi au client de la liste des utilisateurs connectés et des derniers jeux 
-  const lists = {
-    connections: connections,
-    gamesList: gamesList,
-    gameRooms: gameRooms
-  }
-  ioSocket.emit("lists", lists);
+  // Lists va contenir les listes des utilisateurs connectés, des dernières parties et des salles ouvertes à envoyer au client qui se connecte  
 
-  // ajout de l'utilisateur dans la tables de joueurs connectés
-  //
-  // création d'une partie :
-  // - ajout dans la table des parties en cours 'gamesInProgress'
-  //
-  // La partie peut commencer quand il y au moins 2 participants
-  // - création de la partie en base, 
-  // - création d'un objet tour attaché à la partie
-  // - récupération du mot à deviner dans la collection "dictionnary" et envoi de celui-ci aux joueurs
-  // - le 1er qui répond gagne le point
-  // - On boucle sur la création de tours jusqu'à ce qu'il soit mis fin à la partie
-  //
-  // Quand la partie est finie et on fait la somme des scores de chacun. Celui qui a le plus de points a gagné
-  // - mise à jour de la partie en base avec les scores de chacun
-  // - la partie est supprimée de la tables "gamesInProgress"
+  // les dernières parties
+  dbQuery.find({
+    collectionName: 'games',
+    filter: {},
+    sort: { startDate: -1 },
+    limit: 10,
+    done: (data, err) => {
+      if (err) {
+        console.log("erreur recup gamesList")
+      } else {
+        // ajout de l'utilisateur à la liste de utilisateurs connectés
+        lists.gamesList = data;
+        console.log('gamesList ajouté', lists.gamesList)
+      }
+      ioSocket.emit("lists", lists);
+    }
+  });
 
-  // quand le dernier tour est terminé, faire le total de score de chacun des joueurs et mettre à jour la collection "games"
+
   const dicoSelection = {
     word: "abort",
     definition: "Interrompre un process."
@@ -199,10 +190,12 @@ ioServer.on("connect", function (ioSocket) {
   ioSocket.on("addSession", function (sessionOtherId) {
     console.log("> add session ", sessionOtherId)
     //envoi à tous sauf client de la nouvelle connexion
-    ioSocket.emit("newPlayer", ioSocket.pseudo);
+    
     dbQuery.find({
       collectionName: 'sessions',
       filter: { "session": { $regex: sessionOtherId } },
+      sort: {},
+      limit: 0,
       done: (data, err) => {
         // si trouvé contrôle du mot de passe
         // si mot de passe ok alors création d'une session et envoi de la page game 
@@ -219,12 +212,12 @@ ioServer.on("connect", function (ioSocket) {
               pseudo: sessionFound.pseudo,
               status: "available"
             }
-            connections.push(player);
-            //ioServer.emit("newPlayer", player.pseudo);
-            console.log('new player ajouté ', connections)
+            lists.connections.push(player);
+            ioServer.emit("newPlayer", player);
+            console.log('new player ajouté ', lists.connections)
           } else {
             console.log("session non trouvée")
-            //ioSocket.emit("sessionNotFound");
+            ioSocket.emit("sessionNotFound");
           }
         }
       }
@@ -273,8 +266,8 @@ ioServer.on("connect", function (ioSocket) {
   // Le joueur s'est déconnecté
   ioSocket.on("disconnect", function () {
     // du code
-    connections.splice(connections.indexOf(ioSocket), 1);
+    lists.connections.splice(lists.connections.indexOf(ioSocket), 1);
     ioServer.emit("playerQuit", "Machin est déconnecté");
-    console.log("> disconnect : nb connexions en cours", connections.length)
+    console.log("> disconnect : nb connexions en cours", lists.connections.length)
   });
 });
