@@ -26,14 +26,14 @@ exports.insert = (parameters) => {
   console.log('>insert : ', parameters)
   connectDb((db, client) => {
     const collection = db.collection(parameters.collectionName);
-    collection.insertOne(parameters.document, (err, results) => {
+    collection.insertOne(parameters.document, (err, cr) => {
       if (err) {
         console.log(err)
         return
       };
-      console.log(results.results)
+      console.log(cr.result)
       client.close();
-      parameters.done();
+      parameters.done(cr.result);
     });    
 
   });
