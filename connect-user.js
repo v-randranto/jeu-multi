@@ -10,21 +10,6 @@ const sessionInfos = function (parameters) {
   parameters.interpolations.otherId = parameters.session.otherId;
 }
 
-const createUser = function (user) {
-
-  dbQuery.insert({
-    collectionName: 'users', document: user,
-    done: (resultInsert) => {
-
-      if (resultInsert.ok == '1') {
-      } else {
-        console.log("erreur insertion user")
-      }
-
-    }
-  });
-}
-
 exports.connect = function (parameters) {
   const result = {};
   // User already connected
@@ -101,10 +86,10 @@ exports.connect = function (parameters) {
             } else {
               console.log("erreur insertion user")
             }
+            parameters.done(result);            
           }
         });
-        parameters.done(result);
-        return;
+        return
       }
 
       console.log('> register : identifiants KO');

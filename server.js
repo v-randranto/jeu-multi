@@ -6,6 +6,7 @@ const express = require("express");
 const expressSession = require("express-session");
 const MongoStore = require("connect-mongo")(expressSession);
 const bodyParser = require('body-parser');
+const uuidv4 = require('uuid/v4');
 
 const connectUser = require('./connect-user')
 const dbQuery = require('./db-manager');
@@ -71,19 +72,15 @@ app.post('/login', function (req, res) {
       // User already connected
       if (result.alreadyConnected) {
         res.render('game', interpolations);
-      } else {
-        if (result.validCredentials) {
-          res.render('game', interpolations);
-        } else {
-          res.render('connect', interpolations);  // TODO faire un redirect ????
-        }
+        return;
       }
-
+      if (result.validCredentials) {
+        res.render('game', interpolations);
+        return;
+      }
+      res.render('connect', interpolations);  // TODO faire un redirect ????
     }
   });
-
-
-
 })
 
 // User registering
@@ -99,14 +96,13 @@ app.post('/register', function (req, res) {
       // User already connected
       if (result.alreadyConnected) {
         res.render('game', interpolations);
-      } else {
-        if (result.validCredentials) {
-          res.render('game', interpolations);
-        } else {
-          res.render('connect', interpolations);  // TODO faire un redirect ????
-        }
+        return;
       }
-
+      if (result.validCredentials) {
+        res.render('game', interpolations);
+        return;
+      }
+      res.render('connect', interpolations);  // TODO faire un redirect ????
     }
   });
 
@@ -145,15 +141,36 @@ const HTTPServer = app.listen(8080, function () {
 const ioServer = require("socket.io")(HTTPServer);
 //const ioServer = io(HTTPServer);
 
-const gamesList = [];
-const connectedPlayers = [];
+const gamesList = [
+  { name: 'Vero' },
+  { name: 'Riton' }
+];
+const gameRooms = [
+  { name: 'Toche', status: 'playing' },
+  { name: 'Mioum', status: 'available' }
+]
+const connections = [
+  { pseudo: 'Vero', status: 'playing' },
+  { pseudo: 'Toche', status: 'available' }
+];
 
 ioServer.on("connect", function (ioSocket) {
+  // ioServer.emit => à tout le monde
+  // ioSocket.emit => au client unqiuement
+  // ioSocket.broadcast.emit => à tous sauf le client
+  // ioSocket.join('some room') => le client rejoint une salle
+  // ioSocket.to('some room').emit('some event') => emission vers les participants d'une salle
+  // ioSocket.leave('some room');
 
-  ioServer.emit("connectedPlayers", connectedPlayers);
-  ioServer.emit("gamesList", gamesList);
+  //envoi au client de la liste des utilisateurs connectés et des derniers jeux 
+  const lists = {
+    connections: connections,
+    gamesList: gamesList,
+    gameRooms: gameRooms
+  }
+  ioSocket.emit("lists", lists);
 
-  // ajout de l'utilisateurs dans la tables des joueurs connectés
+  // ajout de l'utilisateur dans la tables de joueurs connectés
   //
   // création d'une partie :
   // - ajout dans la table des parties en cours 'gamesInProgress'
@@ -181,22 +198,43 @@ ioServer.on("connect", function (ioSocket) {
   // Réception d'un id pour accéder à la session de l'utilisateur
   ioSocket.on("addSession", function (sessionOtherId) {
     console.log("> add session ", sessionOtherId)
-    // // if (req.session.otherId === sessionOtherId) {
-    // //   console.log("session OK")
-    // //   const player = {
-    // //     sessionOtherId: sessionOtherId,
-    // //     pseudo: "vero"
-    // //   }
-    // //   connectedPlayers.push(player);
-    // //   ioServer.emit("displayPlayer", player);
-    // } else {
-    //   console.log("session non trouvée")
-    //   ioServer.emit("sessionNotFound");
-    // }
+    //envoi à tous sauf client de la nouvelle connexion
+    ioSocket.emit("newPlayer", ioSocket.pseudo);
+    dbQuery.find({
+      collectionName: 'sessions',
+      filter: { "session": { $regex: sessionOtherId } },
+      done: (data, err) => {
+        // si trouvé contrôle du mot de passe
+        // si mot de passe ok alors création d'une session et envoi de la page game 
+        // TODO Code de test à supprimer
+        if (err) {
+          console.log("erreur recup session")
+        } else {
+          if (data.length) {
+            const sessionFound = JSON.parse(data[0].session);
+            // ajout de l'utilisateur à la liste de utilisateurs connectés
+            const player = {
+              idSocket: ioSocket.id,
+              idSession: sessionFound.otherId,
+              pseudo: sessionFound.pseudo,
+              status: "available"
+            }
+            connections.push(player);
+            //ioServer.emit("newPlayer", player.pseudo);
+            console.log('new player ajouté ', connections)
+          } else {
+            console.log("session non trouvée")
+            //ioSocket.emit("sessionNotFound");
+          }
+        }
+      }
+    });
+
+
   });
 
   // Réception d'une demande de création d'une partie
-  ioSocket.on("createGame", function (createGameObject) {
+  ioSocket.on("openRoom", function (createGameObject) {
     console.log("> server create game")
     // création d'une partie avec en 1er joueur celui qui l'a initié 
     // pour le test je sers la question ici. TODO à supprimer
@@ -205,7 +243,7 @@ ioServer.on("connect", function (ioSocket) {
   });
 
   // Réception d'une demande d'ajout d'un joueur à une partie ouverte
-  ioSocket.on("enterGame", function (addPlayer) {
+  ioSocket.on("joinRoom", function (addPlayer) {
     // ajout du 2è joueur à une partie
     // création d'un tour avec un mot à deviner
     // servir la question au client 
@@ -235,6 +273,8 @@ ioServer.on("connect", function (ioSocket) {
   // Le joueur s'est déconnecté
   ioSocket.on("disconnect", function () {
     // du code
-    ioServer.emit("auRevoirServeur", "Machin est déconnecté");
+    connections.splice(connections.indexOf(ioSocket), 1);
+    ioServer.emit("playerQuit", "Machin est déconnecté");
+    console.log("> disconnect : nb connexions en cours", connections.length)
   });
 });

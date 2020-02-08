@@ -26,54 +26,76 @@ window.addEventListener("DOMContentLoaded", function () {
 
         // Connexion avec le serveur socket.io établi
         ioSocket.on("connect", function () {
-            console.log('> connect socket.io ');
+            console.log('> connect socket.io ');   
 
-            // Réception de la liste des jeux envoyé par le serveur
-            ioSocket.on("gamesList", function (players) {
-                const htmlGamesList = document.getElementById('gamesList');
-                console.log('> gamesList ', gamesList);
-                if (gamesList.length) {
-                    const htmlList = document.createElement('ul'); 
-                    htmlGamesList.appendChild(HTMLList);
-                    gamesList.forEach(function (game) {
-                        const htmlItem = document.createElement('li');
-                        htmlList.appendChild(HTMLItem);
-                    });
-                } else {
-                    htmlGamesList.innerHTML = 'Aucun jeu dernièrement.'
-                }
-            });
 
-            // Réception des joueurs connectés envoyé par le serveur
-            ioSocket.on("connectedPlayers", function (players) {
-                const htmlConnectedPlayers = document.getElementById('connectedPlayers');
-                console.log('> connectedPlayers ', players);
-                if (players.length) {
-                    const htmlList = document.createElement('ul'); v
-                    htmlConnectedPlayers.appendChild(HTMLList);
-                    players.forEach(function (player) {
-                        const htmlItem = document.createElement('li');
-                        htmlList.appendChild(HTMLItem);
-                    });
-                } else {
-                    htmlConnectedPlayers.innerHTML = 'Aucun joueur connecté.'
-                }
-            });
-
+            // envoi du 2ème id de la session
             ioSocket.emit("addSession", htmlPlayForm.sessionOtherId.value);
             // Afficher la liste des derniers jeux   
             htmlGameIntro.style.display = "none";
             htmlGamesOverview.style.display = "block";
 
+            // Réception des listes à afficher
+            ioSocket.on("lists", function (lists) {
+                // liste des parties
+                const htmlGamesList = document.getElementById('gamesList');
+                console.log('> gamesList ', gamesList);
+                if (lists.gamesList.length) {
+                    const htmlList = document.createElement('ul'); 
+                    htmlGamesList.appendChild(htmlList);
+                    lists.gamesList.forEach(function (game) {
+                        const htmlItem = document.createElement('li');
+                        htmlItem.innerHTML = `Partie ${game.name}`;
+                        htmlList.appendChild(htmlItem);
+                    });
+                } else {
+                    htmlGamesList.innerHTML = 'Aucun jeu dernièrement.'
+                }
+
+                // liste des salles initiées 
+                const htmlGameRooms = document.getElementById('gameRooms');
+                console.log('> gameRooms ', gameRooms);
+                if (lists.gameRooms.length) {
+                    const htmlList = document.createElement('ul'); 
+                    htmlGameRooms.appendChild(htmlList);
+                    lists.gameRooms.forEach(function (room) {
+                        const htmlItem = document.createElement('li');
+                        htmlItem.innerHTML = `Salle ${room.name} ${room.status}`;
+                        htmlList.appendChild(htmlItem);
+                    });
+                } else {
+                    htmlGameRooms.innerHTML = 'Aucune salle de jeu.'
+                }
+
+                // liste des joueurs connectés 
+                const htmlConnections = document.getElementById('connections');
+                console.log('> connections ', connections);
+                if (lists.connections.length) {
+                    const htmlList = document.createElement('ul'); 
+                    htmlConnections.appendChild(htmlList);
+                    lists.connections.forEach(function (player) {
+                        const htmlItem = document.createElement('li');
+                        htmlItem.innerHTML = `${player.pseudo} ${player.status}`;
+                        htmlList.appendChild(htmlItem);
+                    });
+                } else {
+                    htmlConnections.innerHTML = 'Aucun joueur connecté.'
+                }
+
+            });
+
+            ioSocket.on("newPlayer", function (player) {
+                // à affichier à la liste des joueurs connecté
+            });
             // Au clic du bouton "initier une partie", demander au serveur la création d'une partie
             htmlInitGameBtn.addEventListener('click', function () {
                 console.log('> click on game init')
-                ioSocket.emit("createGame");
+                ioSocket.emit("openRoom");
             })
             // Au clic du bouton "Participer à une partie", demander au serveur d'ajouter le joueur à une partie ouverte
             htmlEnterGameBtn.addEventListener('click', function () {
                 console.log('> click on enter game')
-                ioSocket.emit("addPlayer", "playerObject");
+                ioSocket.emit("joinRoom", "playerObject");
             })
 
 
