@@ -22,5 +22,5 @@ a {
 }
 
 #register, #gamesOverview, #question,#sessionOtherId {
-  display: none;
+  visibility: hidden;
 }

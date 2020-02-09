@@ -142,10 +142,7 @@ const ioServer = require("socket.io")(HTTPServer);
 //const ioServer = io(HTTPServer);
 
 const lists = {
-  gameRooms: [
-    { name: 'Toche', status: 'playing' },
-    { name: 'Mioum', status: 'available' }
-  ],
+  gameRooms: [],
   connections: []
 }
 
@@ -177,7 +174,6 @@ ioServer.on("connect", function (ioSocket) {
     }
   });
 
-
   const dicoSelection = {
     word: "abort",
     definition: "Interrompre un process."
@@ -205,15 +201,15 @@ ioServer.on("connect", function (ioSocket) {
         } else {
           if (data.length) {
             const sessionFound = JSON.parse(data[0].session);
-            // ajout de l'utilisateur à la liste de utilisateurs connectés
-            const player = {
-              idSocket: ioSocket.id,
+            // ajout de l'utilisateur à la liste de utilisateurs connectés            
+            ioSocket.player = {
               idSession: sessionFound.otherId,
               pseudo: sessionFound.pseudo,
-              status: "available"
-            }
-            lists.connections.push(player);
-            ioServer.emit("newPlayer", player);
+              available: true,
+              score: 0
+            };
+            lists.connections.push(ioSocket.player);
+            ioServer.emit("newPlayer", ioSocket.player);
             console.log('new player ajouté ', lists.connections)
           } else {
             console.log("session non trouvée")
@@ -228,20 +224,53 @@ ioServer.on("connect", function (ioSocket) {
 
   // Réception d'une demande de création d'une partie
   ioSocket.on("openRoom", function (createGameObject) {
-    console.log("> server create game")
+    console.log("> server openRoom")
     // création d'une partie avec en 1er joueur celui qui l'a initié 
     // pour le test je sers la question ici. TODO à supprimer
-
-    ioServer.emit("question", question); // à supprimer 
+    
+    // TODO vérifier que la salle n'existe pas
+    if (ioSocket.player.available){
+      ioSocket.join('dimanche');
+      //ioSocket.player.available = false;
+      const room = {
+        name: 'dimanche',
+        players: [ioSocket.player],
+        accessible: true,
+        nbRoundsPlayed: 0
+      }
+      lists.gameRooms.push(room);
+      console.log("> ajout room ", lists.gameRooms)
+      ioServer.emit("newRoom", room)
+    } else {
+      // TODO
+      console.log('> joueur déjà occupé')
+    }
+    
   });
 
   // Réception d'une demande d'ajout d'un joueur à une partie ouverte
-  ioSocket.on("joinRoom", function (addPlayer) {
+  ioSocket.on("joinRoom", function () {
     // ajout du 2è joueur à une partie
     // création d'un tour avec un mot à deviner
     // servir la question au client 
+    if (ioSocket.player.available){
+      //ioSocket.player.available = false;
+      ioSocket.join('dimanche')
+      ioSocket.to('dimanche').emit('playerJoining', ioSocket.player.pseudo)
+      ioSocket.to('dimanche').emit("question", question); // uniquement pour le test TODO à supprimer
+      // ajouter le player à la salle 'dimanche'
+      lists.gameRooms.forEach(function(room){
+        if (room.name === 'dimanche'){
+          room.players.push(ioSocket.player)
+          return;
+        }
+      })
 
-    ioServer.emit("question", question);
+    } else {
+      // TODO
+      console.log('> joueur déjà occupé')
+    }
+    
   });
 
   // Réception de la réponse du joueur
