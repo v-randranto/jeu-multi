@@ -142,6 +142,7 @@ const ioServer = require("socket.io")(HTTPServer);
 //const ioServer = io(HTTPServer);
 
 const lists = {
+  gamesList: [],
   roomsList: [],
   connections: []
 }
@@ -167,7 +168,6 @@ ioServer.on("connect", function (ioSocket) {
         console.log("erreur recup gamesList")
       } else {
         if (data.length) {
-          lists.gamesList = [];
           for (let i = 0; data[i]; i++) {
             let game = {};
             game.startDate = tool.dateSimple(data[i].startDate);
@@ -259,11 +259,7 @@ ioServer.on("connect", function (ioSocket) {
     word: "abort",
     definition: "Interrompre un process."
   }
-  const question = {
-    wordLength: dicoSelection.word.length,
-    definition: dicoSelection.definition
-  }
-
+  
   // Un joueur veut accéder à une salle
   ioSocket.on("joinRoom", function (roomName) {
 
@@ -285,15 +281,18 @@ ioServer.on("connect", function (ioSocket) {
       if (room) {
         // demander la mise à jour de la salle chez tous ses joueurs
         console.log('add player in room ', room)
-        ioServer.to(roomName).emit('playerJoining', room);
-        //TODO émettre la question quand le signal est donné
-        setTimeout(function () {
-          room.nbRoundsPlayed++;
-          question.rank = room.nbRoundsPlayed++;
+        ioServer.to(roomName).emit('updateRoom', room);
+
+        //TODO émettre la question quand le signal est donné      
+          room.nbRoundsPlayed++;         
           // envoyer la question à tous les joueurs de la salle
-          ioServer.to(roomName).emit('question', question);
+          const quizMsg = {
+            word: `Tour n° ${room.nbRoundsPlayed} - Mot de ${dicoSelection.word.length} lettres.`,
+            definition: `Définition : ${dicoSelection.definition}`
+          }
+          ioServer.to(roomName).emit('quiz', quizMsg);
           // TODO la salle ne doit plus être dispo dès que le jeu commence ???
-        }, 1000);
+       
       } else {
         //TODO
         console.log('salle non trouvée')

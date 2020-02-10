@@ -15,7 +15,7 @@ window.addEventListener("DOMContentLoaded", function () {
 
     var htmlRoom = document.getElementById('room');
     var htmlRoomPlayers = document.getElementById('roomPlayers');
-    var htmlQuestion = document.getElementById('question');
+    var htmlQuiz = document.getElementById('quiz');
     var htmlAnswserForm = document.getElementById('answerForm');
 
     /**
@@ -28,7 +28,7 @@ window.addEventListener("DOMContentLoaded", function () {
         //mouchka 192.168.1.50
         //home 192.168.1.11
         //ifocop 192.168.105.70
-        var ioSocket = io("http://192.168.1.11:8080", function () {
+        var ioSocket = io("http://192.168.105.70:8080", function () {
 
         });
 
@@ -101,6 +101,7 @@ window.addEventListener("DOMContentLoaded", function () {
                    
                 }
                 // TODO à factoriser
+                // TODO à sortir de cette fonction ????
                 ioSocket.on("newPlayer", function (player) {
                     // à ajouter à la liste des joueurs connectés
                     var htmlList = document.querySelector('#connections ul');
@@ -171,7 +172,8 @@ window.addEventListener("DOMContentLoaded", function () {
                 document.getElementById('msgMeGames').innerHTML = `Vous êtes déjà dans une salle.`;
             });
 
-            ioSocket.on("playerJoining", function (room) {
+            ioSocket.on("updateRoom", function (room) {
+                htmlRoom.style.visibility = "visible";
                 htmlRoomPlayers.innerHTML = "";               
                 for (var i=0;room.players[i];i++) {
                     var player = room.players[i];
@@ -185,18 +187,18 @@ window.addEventListener("DOMContentLoaded", function () {
             });
 
             // Réception du mot à deviner envoyé par le serveur
-            ioSocket.on("question", function (question) {
+            ioSocket.on("quiz", function (quizMsg) {
                 // affichage de la définition du mot 
-                htmlQuestion.style.visibility = "visible";
-                console.log('> question ', question);
-                document.getElementById('wordLength').innerHTML = `Tour n° ${question.rank} - Mot de ${question.wordLength} lettres.`;
-                document.getElementById('definition').innerHTML = `Définition : ${question.definition}`;
+                htmlQuiz.style.visibility = "visible";
+                console.log('> quiz ', quizMsg);
+                document.getElementById('wordLength').innerHTML = quizMsg.word;
+                document.getElementById('definition').innerHTML = quizMsg.definition;
             });
 
             // Soumission de la réponse du joueur et envoi au serveur
             htmlAnswserForm.addEventListener("submit", function (event) {
                 event.preventDefault();
-                console.log('> answer submit ')
+                console.log('> answer submit ');
                 ioSocket.emit("answer", htmlAnswserForm.answer.value);
             });
 
