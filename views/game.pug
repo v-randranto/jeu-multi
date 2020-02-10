@@ -9,32 +9,37 @@ html(lang="en")
         #gameIntro 
             - var sessionOtherId = otherId
             p Bonjour #{pseudo}!
-            p Présentation du jeu bla bla bla
-            form(id="playForm")
+            p Présentation et règles du jeu. Test du vocabulaire informatique anglais     2 à 5 joueurs. 30s pour trouver le mot correspondant à la définition proposé par le serveur. Le premier qui trouve marque 1 point. Le gagnant de la partie sera celui qui aura marqué le plus de points. Partie initiée par un joueur en créant une salle, les autres joueurs participent en cliquant sur la salle. 
+            form(id="playForm" method="POST")
                     input(type="text", name="sessionOtherId", id="sessionOtherId", value=sessionOtherId)               
                     input(type="submit", value="Jouer")
 
         #gamesOverview
-            p(id="gamesList") Dernières parties
-            p(id="gameRooms") Salles de jeu en cours
-            p(id="connections") Joueurs connectés
+            h3 Dernières parties
+            p(id="gamesList") 
+            h3 Salles de jeu en cours
+            p(id="roomsList")
+            h3 Joueurs connectés 
+            p(id="connections") 
 
-            button(id="initGameBtn") Initier une partie
-            button(id="enterGameBtn") Participer à une partie
+            button(id="initGameBtn") Initier une partie 
+            p(id="msgAllGames")
+            p(id="msgMeGames")
 
-        #question 
-            p Score de chacun
-            p Tour n°
-            p(id="wordLength")
-            p(id="definition")
-        
-            form(id="answerForm")
-                p Votre réponse : 
-                    input(type="text", name="answer" )
-                p 
-                    input(type="submit", value="Envoyer")
-            p(id="result")
-            p(id="answerFound")
+        #room 
+            #roomPlayers
+            p(id="msgAllRoom")
+            p(id="msgMeRoom")
+            #question
+                p(id="wordLength")
+                p(id="definition")
+            
+                form(id="answerForm")
+                    p Votre réponse : 
+                        input(type="text", name="answer" )
+                    p 
+                        input(type="submit", value="Envoyer")
+                    p(id="answerMsg")
 
-        script(src="http://localhost:8080/socket.io/socket.io.js")
+        script(src="http://192.168.1.11:8080/socket.io/socket.io.js")
         script(src="../js/game.js")

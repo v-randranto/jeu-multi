@@ -20,7 +20,13 @@ button {
 a {
   color: antiquewhite;
 }
+#register {
+  display: none;
+}
 
-#register, #gamesOverview, #question,#sessionOtherId {
+#gamesOverview, #gameRoom,#sessionOtherId, #room, #question {
   visibility: hidden;
+}
+.clickable {
+  cursor: pointer;
 }

@@ -3,19 +3,20 @@
  */
 window.addEventListener("DOMContentLoaded", function () {
 
-    const htmlGameIntro = document.getElementById('gameIntro');
-    const htmlPlayForm = document.getElementById('playForm');
+    var htmlGameIntro = document.getElementById('gameIntro');
+    var htmlPlayForm = document.getElementById('playForm');
 
-    const htmlGamesOverview = document.getElementById('gamesOverview');
-    const htmlGamesList = document.getElementById('gamesList');
-    const htmlGameRooms = document.getElementById('gameRooms');
-    const htmlConnections = document.getElementById('connections');
+    var htmlGamesOverview = document.getElementById('gamesOverview');
+    var htmlGamesList = document.getElementById('gamesList');
+    var htmlRoomsList = document.getElementById('roomsList');
+    var htmlConnections = document.getElementById('connections');
 
-    const htmlInitGameBtn = document.getElementById('initGameBtn');
-    const htmlEnterGameBtn = document.getElementById('enterGameBtn');
+    var htmlInitGameBtn = document.getElementById('initGameBtn');
 
-    const htmlQuestion = document.getElementById('question');
-    const htmlAnswserForm = document.getElementById('answerForm');
+    var htmlRoom = document.getElementById('room');
+    var htmlRoomPlayers = document.getElementById('roomPlayers');
+    var htmlQuestion = document.getElementById('question');
+    var htmlAnswserForm = document.getElementById('answerForm');
 
     /**
      * Connection to socket.io on 'play' form submission
@@ -24,7 +25,10 @@ window.addEventListener("DOMContentLoaded", function () {
         console.log('> submit play form');
         console.log('sessionOtherId : ', htmlPlayForm.sessionOtherId.value)
         event.preventDefault();
-        const ioSocket = io("http://localhost:8080", function () {
+        //mouchka 192.168.1.50
+        //home 192.168.1.11
+        //ifocop 192.168.105.70
+        var ioSocket = io("http://192.168.1.11:8080", function () {
 
         });
 
@@ -34,63 +38,78 @@ window.addEventListener("DOMContentLoaded", function () {
             console.log('> connect socket.io ');
             // envoi du 2ème id de la session
             ioSocket.emit("addSession", htmlPlayForm.sessionOtherId.value);
-            // Afficher la liste des derniers jeux   
-            htmlGameIntro.style.visibility = "hidden";
+
+            document.getElementById('playForm').style.display = "none";
             htmlGamesOverview.style.visibility = "visible";
 
             // Réception des listes à afficher
-            ioSocket.on("lists", function (lists) {
-                // htmlGamesList.innerHTML = "";
-                // htmlGameRooms.innerHTML = "";
-                // htmlConnections.innerHTML = "";
-
+            ioSocket.on("displayLists", function (lists) {
                 // liste des parties                
-                console.log('> gamesList ', gamesList);
+                console.log('> gamesList ', lists.gamesList);
                 if (lists.gamesList.length) {
-                    const htmlList = document.createElement('ul');
+                    
+                    var htmlList = document.createElement('ul');
                     htmlGamesList.appendChild(htmlList);
-                    lists.gamesList.forEach(function (game) {
-                        const htmlItem = document.createElement('li');
-                        htmlItem.innerHTML = `Partie ${game.startDate}`;
+                    for (var i=0; lists.gamesList[i]; i++ ) {
+                        var game = lists.gamesList[i];
+                        console.log('game ', game)
+                        var htmlItem = document.createElement('li');
+                        htmlItem.innerHTML = `Partie du ${game.startDate}, druée ${game.duration}`;
                         htmlList.appendChild(htmlItem);
-                    });
+                    }
+                    
                 }
                 // TODO à factoriser
-                // liste des salles initiées                
-                console.log('> gameRooms ', gameRooms);
-                if (lists.gameRooms.length) {
-                    const htmlList = document.createElement('ul');
-                    htmlGameRooms.appendChild(htmlList);
-                    lists.gameRooms.forEach(function (room) {
-                        const htmlItem = document.createElement('li');
-                        const status = room.accessible ? 'accessible' : 'partie en cours en cours'
+                // liste des salles ouvertes                
+                console.log('> roomsList ', roomsList);
+                if (lists.roomsList.length) {
+                    
+                    var htmlList = document.createElement('ul');
+                    htmlRoomsList.appendChild(htmlList);
+
+                    for (var i=0;lists.roomsList[i];i++) {
+                        var room = lists.roomsList[i];
+                        var htmlItem = document.createElement('li');
+                        var status = room.accessible ? 'accessible' : 'verrouillée';
                         htmlItem.innerHTML = `Salle ${room.name} ${status}`;
+                        if (room.accessible) {
+                            htmlItem.id = room.name;
+                            htmlItem.classList.add('clickable')
+                            htmlItem.addEventListener('click', function () {
+                                ioSocket.emit("joinRoom", this.id);
+                                htmlInitGameBtn.disabled = true;
+                            });
+                        }
                         htmlList.appendChild(htmlItem);
-                    });
+                    }
+                    
                 }
                 // TODO à factoriser
                 // liste des joueurs connectés                
                 console.log('> connections ', connections);
-                const htmlList = document.createElement('ul');
+                
+                var htmlList = document.createElement('ul');
                 htmlConnections.appendChild(htmlList);
                 if (lists.connections.length) {
-                    lists.connections.forEach(function (player) {
-                        const htmlItem = document.createElement('li');
-                        const status = player.available ? 'glandouille' : 'en train de jouer';
+                    for(var i=0;lists.connections[i]; i++) {
+                        var player = lists.connections[i];
+                        var htmlItem = document.createElement('li');
+                        var status = player.room ? 'occupé' : 'libre';
                         htmlItem.innerHTML = `${player.pseudo} ${status}`;
                         htmlList.appendChild(htmlItem);
-                    });
+                    }
+                   
                 }
                 // TODO à factoriser
                 ioSocket.on("newPlayer", function (player) {
                     // à ajouter à la liste des joueurs connectés
-                    let htmlList = document.querySelector('#connections ul');
-                    const htmlItem = document.createElement('li');
+                    var htmlList = document.querySelector('#connections ul');
+                    var htmlItem = document.createElement('li');
                     if (!htmlList) {
                         htmlList = document.createElement('ul');
                         htmlConnections.appendChild(htmlList);
                     }
-                    const status = player.available ? 'glandouille' : 'en train de jouer';
+                    var status = player.room ? 'occupé' : 'libre';
                     htmlItem.innerHTML = `${player.pseudo} ${status}`;
                     htmlList.appendChild(htmlItem);
                 });
@@ -105,36 +124,72 @@ window.addEventListener("DOMContentLoaded", function () {
             htmlInitGameBtn.addEventListener('click', function () {
                 console.log('> click on game init')
                 ioSocket.emit("openRoom");
+                // bouton 'initier parte devient disabled
+                htmlInitGameBtn.disabled = true;
             })
             // TODO à factoriser
-            ioSocket.on("newRoom", function (room) {
-                // à ajouter à la liste des salles
-                console.log('>new Room à afficher')
-                let htmlList = document.querySelector('#gameRooms ul');
-                const htmlItem = document.createElement('li');
-                if (!htmlList) {
-                    htmlList = document.createElement('ul');
-                    htmlGameRooms.appendChild(htmlList);
-                }
-                const status = room.accessible ? 'accessible' : 'partie en cours en cours'
-                htmlItem.innerHTML = `Salle ${room.name} ${status}`;
-                htmlList.appendChild(htmlItem);
+            // afficher la salle et le joueur
+            ioSocket.on("displayNewRoom", function (room) {
+                htmlRoom.style.visibility = "visible";
+                var htmlRounds = document.createElement('p');
+                for (var i=0;room.players[i];i++) {
+                    var player = room.players[i];
+                    var htmlPlayer = document.createElement('p')
+                    htmlPlayer.id = player.idSession;
+                    htmlPlayer.classList.add('player');                    
+                    htmlPlayer.innerHTML = `${player.pseudo} ${player.score} points.`;
+                    htmlRoomPlayers.appendChild(htmlPlayer);
+                }                
+                
             });
 
-            // Au clic du bouton "Participer à une partie", demander au serveur d'ajouter le joueur à une partie ouverte
-            htmlEnterGameBtn.addEventListener('click', function () {
-                console.log('> click on enter game')
-                ioSocket.emit("joinRoom");
+            // ajouter la nouvelle salle à la liste
+            ioSocket.on("updateRoomsList", function (room) {
 
-            })
+                console.log('>new Room à afficher')
+                var htmlList = document.querySelector('#roomsList ul');
+                var htmlItem = document.createElement('li');
+                if (!htmlList) {
+                    htmlList = document.createElement('ul');
+                    htmlRoomsList.appendChild(htmlList);
+                }
+               
+                htmlItem.innerHTML = `Salle ${room.name} accessible`;
+                // On peut rejoindre la salle en cliquant dessus
+                htmlItem.id = room.name;
+                htmlItem.classList.add('clickable')
+                htmlItem.addEventListener('click', function () {
+                    ioSocket.emit("joinRoom", this.id);
+                    htmlInitGameBtn.disabled = true;
+                });
+                htmlList.appendChild(htmlItem);                
+
+            });
+
+            ioSocket.on("alreadyInRoom", function () {
+                htmlInitGameBtn.disabled = false;
+                document.getElementById('msgMeGames').innerHTML = `Vous êtes déjà dans une salle.`;
+            });
+
+            ioSocket.on("playerJoining", function (room) {
+                htmlRoomPlayers.innerHTML = "";               
+                for (var i=0;room.players[i];i++) {
+                    var player = room.players[i];
+                    var htmlPlayer = document.createElement('p')
+                    htmlPlayer.id = player.idSession;
+                    htmlPlayer.classList.add('player');                    
+                    htmlPlayer.innerHTML = `${player.pseudo} ${player.score} points.`;
+                    htmlRoomPlayers.appendChild(htmlPlayer);
+                }      
+
+            });
+
             // Réception du mot à deviner envoyé par le serveur
             ioSocket.on("question", function (question) {
-
-                //HTMLinitGameBtn.style.disabled;
                 // affichage de la définition du mot 
                 htmlQuestion.style.visibility = "visible";
                 console.log('> question ', question);
-                document.getElementById('wordLength').innerHTML = `Mot de ${question.wordLength} lettres.`;
+                document.getElementById('wordLength').innerHTML = `Tour n° ${question.rank} - Mot de ${question.wordLength} lettres.`;
                 document.getElementById('definition').innerHTML = `Définition : ${question.definition}`;
             });
 
@@ -146,12 +201,33 @@ window.addEventListener("DOMContentLoaded", function () {
             });
 
             // Réception du résultat du contrôle de la réponse du joueur
-            ioSocket.on("answerChecked", function (result) {
-                console.log('> answerChecked ')
+            ioSocket.on("wrongAnswer", function (message) {
+                console.log('> wrongAnswer ')
                 // Result visibility
-                document.getElementById('result').innerHTML = result.message;
+                document.getElementById('answerMsg').innerHTML = message;
             });
 
+            // Réception du résultat du contrôle de la réponse du joueur
+            ioSocket.on("rightAnswer", function (message) {
+                console.log('> rightAnswer ')
+                // Result visibility
+                document.getElementById('msgAllRoom').innerHTML = message;
+            });
+
+            // un joueur quitte la salle
+            ioSocket.on("playerQuits", function (message) {
+                //TODO                
+            });
+
+            // mettre à jour les salles suite à une fermeture
+            ioSocket.on("connectionsUpdate", function (connections) {
+                //TODO
+            });
+
+            // mettre à jour les connections suite à une déconnection
+            ioSocket.on("connectionsUpdate", function (connections) {
+                //TODO
+            });
 
         });
 

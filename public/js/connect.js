@@ -1,10 +1,10 @@
 window.addEventListener("DOMContentLoaded", function () {
 
-    const htmlMsgClass = document.getElementsByClassName('msg');
-    const htmlLoginBtn = document.getElementById('loginBtn');
-    const htmlRegisterBtn = document.getElementById('registerBtn');
-    const htmlLoginBlock = document.getElementById('login');
-    const htmlRegisterBlock = document.getElementById('register');
+    var htmlMsgClass = document.getElementsByClassName('msg');
+    var htmlLoginBtn = document.getElementById('loginBtn');
+    var htmlRegisterBtn = document.getElementById('registerBtn');
+    var htmlLoginBlock = document.getElementById('login');
+    var htmlRegisterBlock = document.getElementById('register');
 
     /**
      * Connexion socket.io au clic du bouton 'jouer'
