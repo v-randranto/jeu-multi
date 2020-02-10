@@ -141,11 +141,10 @@ const HTTPServer = app.listen(8080, function () {
 const ioServer = require("socket.io")(HTTPServer);
 //const ioServer = io(HTTPServer);
 
-const lists = {
-  gamesList: [],
-  roomsList: [],
-  connections: []
-}
+
+const connections = [];
+const roomsList = [];
+const gamesList = [];
 
 ioServer.on("connect", function (ioSocket) {
   // ioServer.emit => à tout le monde
@@ -154,8 +153,11 @@ ioServer.on("connect", function (ioSocket) {
   // ioSocket.join('some room') => le client rejoint une salle
   // ioSocket.to('some room').emit('some event') => emission vers les participants d'une salle
   // ioSocket.leave('some room');
-
-  // Lists va contenir les listes des utilisateurs connectés, des dernières parties et des salles ouvertes à envoyer au client qui se connecte  
+  const lists = {
+    connections: connections,
+    roomsList: roomsList,
+    gamesList: gamesList
+  }
 
   // les dernières parties
   dbQuery.find({
@@ -167,6 +169,7 @@ ioServer.on("connect", function (ioSocket) {
       if (err) {
         console.log("erreur recup gamesList")
       } else {
+        lists.gamesList = [];
         if (data.length) {
           for (let i = 0; data[i]; i++) {
             let game = {};
@@ -201,6 +204,7 @@ ioServer.on("connect", function (ioSocket) {
         if (err) {
           console.log("erreur recup session")
         } else {
+
           if (data.length) {
             const sessionFound = JSON.parse(data[0].session);
             // ajout de l'utilisateur à la liste de utilisateurs connectés            
@@ -209,9 +213,9 @@ ioServer.on("connect", function (ioSocket) {
               pseudo: sessionFound.pseudo,
               score: 0
             };
-            lists.connections.push(ioSocket.player);
+            connections.push(ioSocket.player);
             ioServer.emit("newPlayer", ioSocket.player);
-            console.log('new player ajouté ', lists.connections)
+            console.log('new player ajouté ', connections)
           } else {
             console.log("session non trouvée")
             ioSocket.emit("sessionNotFound");
@@ -219,7 +223,6 @@ ioServer.on("connect", function (ioSocket) {
         }
       }
     });
-
 
   });
 
@@ -230,43 +233,62 @@ ioServer.on("connect", function (ioSocket) {
     // pour le test je sers la question ici. TODO à supprimer
 
     // TODO vérifier que la salle n'existe pas
-    if (!ioSocket.player.roomName) {
-      const roomName = ioSocket.player.pseudo
-      ioSocket.join(roomName);
-      ioSocket.player.room = roomName;
-      //ioSocket.player.available = false;
+    if (ioSocket.player.roomName) {
+      // TODO
+      console.log('> joueur déjà occupé');
+      ioSocket.emit("alreadyInRoom");
+    } else {
+      // création de la salle
       const room = {
-        name: roomName,
+        name: ioSocket.player.pseudo,
         players: [ioSocket.player],
         accessible: true,
         nbRoundsPlayed: 0
-      }
-      lists.roomsList.push(room);
-      console.log("> ajout room ", lists.roomsList)
+      };
+      ioSocket.join(room.name);
+      ioSocket.player.roomName = room.name;
+
+      //ajout dans la liste des salles
+      roomsList.push(room);
+
+      console.log("> ajout room ", room)
       // demander l'affichage de la salle au client
       ioSocket.emit("displayNewRoom", room)
       // màj de la liste des salles pour tous
       ioServer.emit("updateRoomsList", room);
-    } else {
-      // TODO
-      console.log('> joueur déjà occupé');
-      ioSocket.emit("alreadyInRoom");
+
+      // charger le dictionnaire
+      dbQuery.find({
+        collectionName: 'dictionnary',
+        filter: {},
+        sort: {},
+        limit: 0,
+        done: (data, err) => {
+          if (err) {
+            //TODO service indisponible
+            console.log('> erreur chargement dico')
+          } else {
+            if (data.length) {
+              room.selectedWords = data
+            } else {
+              //TODO service indisponible
+              console.log('> dico vide !!')
+            }
+          }
+
+        }
+      });
     }
 
   });
 
-  const dicoSelection = {
-    word: "abort",
-    definition: "Interrompre un process."
-  }
-  
   // Un joueur veut accéder à une salle
   ioSocket.on("joinRoom", function (roomName) {
 
     // Le joueur ne doit pas être dans une autre salle
-    if (!ioSocket.player.room) {
+    if (!ioSocket.player.roomName) {
 
-      ioSocket.player.room = roomName;
+      ioSocket.player.roomName = roomName;
       ioSocket.join(roomName);
 
       // ajouter le joueur dans la salle 
@@ -282,17 +304,20 @@ ioServer.on("connect", function (ioSocket) {
         // demander la mise à jour de la salle chez tous ses joueurs
         console.log('add player in room ', room)
         ioServer.to(roomName).emit('updateRoom', room);
-
         //TODO émettre la question quand le signal est donné      
-          room.nbRoundsPlayed++;         
-          // envoyer la question à tous les joueurs de la salle
-          const quizMsg = {
-            word: `Tour n° ${room.nbRoundsPlayed} - Mot de ${dicoSelection.word.length} lettres.`,
-            definition: `Définition : ${dicoSelection.definition}`
-          }
+        room.nbRoundsPlayed++;
+        const word = room.selectedWords[room.nbRoundsPlayed - 1];
+        // envoyer la question à tous les joueurs de la salle
+        const quizMsg = {
+          word: `Tour n° ${room.nbRoundsPlayed} - Mot de ${word.length} lettres.`,
+          definition: `Définition : ${word.definition}`
+        }
+        setTimeout(function () {
           ioServer.to(roomName).emit('quiz', quizMsg);
-          // TODO la salle ne doit plus être dispo dès que le jeu commence ???
-       
+        });
+
+        // TODO la salle ne doit plus être dispo dès que le jeu commence ???
+
       } else {
         //TODO
         console.log('salle non trouvée')
@@ -309,11 +334,43 @@ ioServer.on("connect", function (ioSocket) {
   // Réception de la réponse du joueur
   ioSocket.on("answer", function (answer) {
 
+    let room;
+    for (let i = 0; lists.roomsList[i]; i++) {
+      if (lists.roomsList[i].name === ioSocket.player.roomName) {
+        lists.roomsList[i].players.push(ioSocket.player);
+        room = lists.roomsList[i];
+        break;
+      }
+    }
+
+    let word = room.selectedWords[room.nbRoundsPlayed -1].word;
+
     // Contrôle de la réponse du joueur
-    if (answer.toUpperCase() === dicoSelection.word.toUpperCase()) {
+    if (answer.toUpperCase() === word.toUpperCase()) {
       //terminer le tour : annoncer le gagnant, enregistrer le tour, créer un nouveau tour
       // envoi à tous 'réponse trouvé'
-      ioServer.to(ioSocket.player.room).emit('rightAnswer', `${ioSocket.player.pseudo} a trouvé : <b>${dicoSelection.word.toUpperCase()}</b>`)
+      ioSocket.player.score++;
+
+      const rightAnswerObject = {
+        message: `${ioSocket.player.pseudo} a trouvé : <b>${word.toUpperCase()}</b>`,
+      }
+      // récupération de la salle
+      // constitution de la réponse à envoyer aux joueurs de la salle
+      rightAnswerObject.room = room;
+      ioServer.to(room.roomName).emit('rightAnswer', rightAnswerObject);
+
+      // nouvelle définition à envoyer
+      room.nbRoundsPlayed++;
+      const nextWord = room.selectedWords[room.nbRoundsPlayed - 1];
+      // envoyer la question à tous les joueurs de la salle
+      const quizMsg = {
+        word: `Tour n° ${room.nbRoundsPlayed} - Mot de ${nextWord.length} lettres.`,
+        definition: `Définition : ${nextWord.definition}`
+      }
+      setTimeout(function () {
+        ioServer.to(room.name).emit('quiz', quizMsg);
+      });
+
     } else {
       // envoi au client 'mauvaise réponse'
       ioSocket.emit("wrongAnswer", "Mauvaise réponse");
@@ -325,8 +382,8 @@ ioServer.on("connect", function (ioSocket) {
   ioSocket.on("disconnect", function () {
     // du code
     if (ioSocket.player) {
-      if (ioSocket.player.room) {
-        ioServer.to(ioSocket.player.room).emit('playerQuits', ioSocket.player);
+      if (ioSocket.player.roomName) {
+        ioServer.to(ioSocket.player.roomName).emit('playerQuits', ioSocket.player);
       }
     }
     lists.connections.splice(lists.connections.indexOf(ioSocket), 1);
