@@ -459,7 +459,7 @@ ioServer.on("connect", function (ioSocket) {
 
   ioSocket.on("leaveRoom", function (roomName) {
     // TODO
-  }
+  });
 
   /*========================================*
    *      Déconnection d'un joueur
