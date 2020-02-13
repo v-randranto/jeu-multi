@@ -9,10 +9,10 @@ html(lang="en")
         #gameIntro 
             - var sessionOtherId = otherId
             p Bonjour #{pseudo}!
-            p Présentation et règles du jeu. Test du vocabulaire informatique anglais     2 à 5 joueurs. 30s pour trouver le mot correspondant à la définition proposé par le serveur. Le premier qui trouve marque 1 point. Le gagnant de la partie sera celui qui aura marqué le plus de points. Partie initiée par un joueur en créant une salle, les autres joueurs participent en cliquant sur la salle. 
+            p Est-ce que votre anglais technique assure ? Vous pouvez vous tester en jouant contre 1 jusqu'à 5 autres joueurs. 30s pour trouver le mot répondant à la définition proposée. Le premier qui trouve marque 1 point. Et qui c'est qui gagne ? Celui qui a le plus de points après 10 tours. Vous pouvez initier une partie (cela crée une salle) ou cliquer sur une salle accessible. 
             form(id="playForm" method="POST")
                     input(type="text", name="sessionOtherId", id="sessionOtherId", value=sessionOtherId)               
-                    input(type="submit", value="Jouer")
+                    input(type="submit", value="On y va !")
 
         #gamesOverview
             h3 Dernières parties

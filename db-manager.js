@@ -40,25 +40,3 @@ exports.insert = (parameters) => {
 
   });
 };
-
-exports.update = (parameters) => {
-  console.log('>update article : ', parameters);
-  connectDb((db, client) => {
-    const collection = db.collection(parameters.collectionName);
-    collection.updateOne(parameters.filter, { $set: parameters.document }, (err) => {
-      client.close();
-      parameters.done(err);
-    });
-  });
-};
-
-exports.remove = (parameters) => {
-  console.log('>remove article : ', parameters)
-  connectDb((db, client) => {
-    const collection = db.collection(parameters.collectionName);
-    collection.remove(parameters.filter, (err) => {
-      client.close();
-      parameters.done(err);
-    });
-  });
-};

@@ -92,6 +92,23 @@ window.addEventListener("DOMContentLoaded", function () {
         }
     }
 
+    var displayRanking = function (roomPlayers) {
+        console.log('> displayRanking')
+        // 
+        htmlInitGameBtn.disabled = false;
+        document.getElementById('quiz').innerHTML = '';
+        var htmlRanking = document.getElementById('ranking');
+        var htmlList = document.createElement('ul');        
+
+        for (var i = 0; roomPlayers[i]; i++) {
+            var player = roomPlayers[i];            
+            var htmlItem = document.createElement('li');
+            htmlItem.innerHTML = `<b>${player.pseudo}</b> ${player.score} points`;
+            htmlList.appendChild(htmlItem);
+        }
+        htmlRanking.appendChild(htmlList);
+    }
+
     /***********************************************************
      * CONNEXION SOCKET.IO 
      * TODO: commentaires
@@ -138,7 +155,7 @@ window.addEventListener("DOMContentLoaded", function () {
                 console.log('> roomsList ', roomsList);
                 if (lists.roomsList.length) {
                     updateRoomsList(lists.roomsList);
-                    // Attacher un écouteur d'événements à l'élément 'li' contenant une salle cliquable
+                    // une salle disponible est cliquable => au clic signaler au serveur d'ajouter le joueur dans la salle
                     var htmlClickableItems = document.querySelectorAll('.clickable')
                     for (var i = 0; htmlClickableItems[i]; i++) {
                         htmlClickableItems[i].addEventListener('click', function () {
@@ -258,8 +275,10 @@ window.addEventListener("DOMContentLoaded", function () {
             });
 
             // Afficher le classement de la salle
-            ioSocket.on("endGame", function () {
-                console.log('> endGame ');
+            ioSocket.on("ranking", function (roomPlayers) {
+                console.log('> ranking ');
+               displayRanking(roomPlayers);
+
                 // TODO
             });
 

@@ -10,7 +10,6 @@ const express = require("express");
 const expressSession = require("express-session");
 const MongoStore = require("connect-mongo")(expressSession);
 const bodyParser = require('body-parser');
-const uuidv4 = require('uuid/v4');
 
 const connectUser = require('./connect-user');
 const gameFct = require('./game-functions');
@@ -164,7 +163,7 @@ const ioServer = require("socket.io")(HTTPServer);
 
 const roomsList = [];
 const connections = [];
-
+const gamesList = [];
 
 
 /*============================================*
@@ -177,11 +176,14 @@ ioServer.on("connect", function (ioSocket) {
   // Récupérer les dernières parties en base
 
   const lists = {
-    gamesList: gameFct.getGamesList(),
+    gamesList: gamesList,
     roomsList: roomsList,
     connections: connections
   }
   // Envoyer au joueur qui se connecte les listes de parties, salles et joueurs connectés
+  console.log('gameFct :', gameFct)
+  //gamesList = gameFct.dbGames.findGames();  
+
   console.log('listes envoyées :', lists)
   ioSocket.emit("displayLists", lists);
 
@@ -301,7 +303,7 @@ ioServer.on("connect", function (ioSocket) {
       ioSocket.emit("alreadyInRoom");
     } else {
       // Rechercher la salle    
-      let room = gameFct.getRoom(roomsList, roomName);
+      let room = gameFct.manageRoom.getRoom(roomsList, roomName);
 
       // salle trouvée
       if (room) {
@@ -311,18 +313,21 @@ ioServer.on("connect", function (ioSocket) {
         room.players.push(ioSocket.player);
         console.log('add player in room ', room)
 
-        // Envoyer à tous les joueurs de la salle la mise à jour
+        // Envoyer à tous les joueurs de la salle la liste de ses joueurs suite à l'ajout
         ioServer.to(room.name).emit('updateRoomPlayers', room.players);
+        // Envoyer à tous les joueurs connectés la liste des connexions suite à indisponibilité de ce joueur
+        ioServer.emit('updateConnections', connections);
 
-        //TODO émettre la question quand le signal est donné
-        // Envoyer aux joueurs la liste des salles pour mise à jour
-        if (room.players.length == 3) {
+        // Le nombre de joueurs max dans une salle est atteinte
+        if (room.players.length == 2) {
           room.accessible = false;
-          console.log('salle inaccessible => màj liste ', roomsList)
+          room.startDate = Date.now();
+          console.log('salle inaccessible => màj liste ', roomsList);
+          // Envoyer à tous les joueurs connectés la liste des salles suite à inaccessibilité de cette salle
           ioServer.emit('updateRoomsList', roomsList);
-          ioServer.emit('updateConnections', connections);
+          // Envoyer la 1ère question aux joueurs de la salle
           ioServer.to(room.name).emit('msgAllRoom', '<b>La partie commence...</b>');
-          ioServer.to(room.name).emit('quiz', gameFct.sendWordDefinition(room));
+          ioServer.to(room.name).emit('quiz', gameFct.manageRoom.sendWordDefinition(room));
         }
 
       } else {
@@ -342,7 +347,7 @@ ioServer.on("connect", function (ioSocket) {
   ioSocket.on("answer", function (answer) {
 
     // Rechercher la salle du joueur
-    let room = gameFct.getRoom(roomsList, ioSocket.player.roomName);
+    let room = gameFct.manageRoom.getRoom(roomsList, ioSocket.player.roomName);
 
     /*--------------------------------------------*
      *         c'est la bonne :)
@@ -352,7 +357,7 @@ ioServer.on("connect", function (ioSocket) {
 
       // mise à jour du score du joueur
       ioSocket.player.score++;
-      gameFct.updateScore(room.players, ioSocket.id);
+      gameFct.manageRoom.updateScore(room.players, ioSocket.id);
 
       // Envoyer à tous les joueurs de la salle la bonne réponse trouvée et la mise à jour du score du joueur gagnant      
       const message = `${ioSocket.player.pseudo} a trouvé : <b>${room.quizWord.toUpperCase()}</b>`;
@@ -360,21 +365,37 @@ ioServer.on("connect", function (ioSocket) {
       ioServer.to(room.name).emit('msgToAll', message);
       ioServer.to(room.name).emit('updateRoomPlayers', room.players);
 
-      // fin de partie
+      // fin de partie 
       // if (room.nbRoundsPlayed == room.selectedWords.length) {
-      if (room.nbRoundsPlayed == 3) {
-        // TODO
-        gameFct.rankPlayers(room);
-        ioServer.to(room.name).emit('playersRanking', room.players);
-        let game;
-        // TODO insérer game en db
-        // TODO prévoir fermeture salle et libérer les joueurs
-        gameFct.addGamesList(gamesList, game);
+      if (room.nbRoundsPlayed == 2) {
+        // TODO à sortir ? 
+        // Envoyer le classement des joueurs
+        room.players = gameFct.manageRoom.rankPlayers(room.players);
+        console.log('classement :', room.players)
+        ioServer.to(room.name).emit('ranking', room.players);
+        // libérer les joueurs avec room ou connections ???
+        for (var i=0; room.players[i]; i++) {
+          delete(room.players[i].roomName);
+          delete(room.players[i].idSession);
+        }
+        console.log('room players nettoyés', room.players);
+        // Enregistrer en base la partie
+        let game = {
+          startDate: room.startDate,
+          endDate: Date.now(),
+          players: room.players
+        };
+        
+        gameFct.dbGames.insertGame(game);  // asynchrone TODO à compléter
+        // TODO setTimeout pour fermer la salle et libérer les joueurs qui y traîneraient encore
+        gamesList.push(game);
+        ioServer.emit('updateGamesList', gamesList);
+        ioServer.emit('updateConnections', connections);
 
       } else {
         // Nouvelle définition à envoyer aux joueurs de la salle
         console.log('room.selectedWords', room.selectedWords);
-        ioServer.to(room.name).emit('quiz', gameFct.sendWordDefinition(room));
+        ioServer.to(room.name).emit('quiz', gameFct.manageRoom.sendWordDefinition(room));
       }
 
     } else {
@@ -400,8 +421,8 @@ ioServer.on("connect", function (ioSocket) {
     ioSocket.leave(roomName);
     delete(ioSocket.player.roomName);
     // vérifier que c'est bien supprimé au niveau de l'obj connection
-    const room = gameFct.getRoom(roomsList, roomName);
-    const indexofPlayer = gameFct.getIndexofPlayer(room.players, ioSocket.player.pseudo);
+    const room = gameFct.manageRoom.getRoom(roomsList, roomName);
+    const indexofPlayer = gameFct.getIndexof.player(room.players, ioSocket.player.pseudo);
     room.players.splice(indexofPlayer, 1);
     ioServer.to(room.name).emit('updateRoomPlayers', room.players);
     ioServer.emit('updateConnections', connection);
@@ -416,12 +437,12 @@ ioServer.on("connect", function (ioSocket) {
     console.log('>disconnect');
     if (ioSocket.player) {
       if (ioSocket.player.roomName) {
-        let room = gameFct.getRoom(roomsList, ioSocket.player.roomName);
+        let room = gameFct.manageRoom.getRoom(roomsList, ioSocket.player.roomName);
         console.log('joueur déconnecté en salle ', room);
         ioServer.to(room.name).emit('updateRoom', room.name);
       }
     }
-    const indexofConnection = gameFct.getIndexofConnection(connections,ioSocket.id);
+    const indexofConnection = gameFct.getIndexof.connection(connections,ioSocket.id);
     connections.splice(indexofConnection, 1);
     // TODO màj côté client
     ioServer.emit('connectionsUpdate', connections)

@@ -82,16 +82,18 @@ exports.connect = function (parameters) {
         }
 
         dbQuery.insert({
-          collectionName: 'users', document: user,
+          collectionName: 'users',
+          document: user,
           done: (resultInsert) => {
             if (resultInsert.ok == '1') {
               console.log("insertion user OK")
             } else {
               console.log("erreur insertion user")
             }
-            parameters.done(result);            
+            parameters.done(result);
           }
         });
+
         return
       }
 
