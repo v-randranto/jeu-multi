@@ -12,7 +12,8 @@ const MongoStore = require("connect-mongo")(expressSession);
 const bodyParser = require('body-parser');
 const uuidv4 = require('uuid/v4');
 
-const connectUser = require('./connect-user')
+const connectUser = require('./connect-user');
+const gameFct = require('./game-functions');
 const dbQuery = require('./db-manager');
 const titres = require('./titres');
 const tool = require('./tools');
@@ -160,79 +161,11 @@ const HTTPServer = app.listen(8080, function () {
  ******************************************************/
 
 const ioServer = require("socket.io")(HTTPServer);
-//const ioServer = io(HTTPServer);
 
 const roomsList = [];
 const connections = [];
 
-const getRoom = function (roomName) {
-  let room;
-  for (let i = 0; roomsList[i]; i++) {
-    if (roomsList[i].name === roomName) {
-      room = roomsList[i];
-      return room;
-    }
-  }
-}
 
-const updateScore = function (roomPlayers, socketId) {
-  for (let i = 0; roomPlayers[i]; i++) {
-    const player = roomPlayers[i];
-    if (player.socketId === socketId) {
-      player.score++;
-      return;
-    }
-  }
-}
-
-const getGamesList = function () {
-
-  const gamesList = [];
-  dbQuery.find({
-    collectionName: 'games',
-    filter: {},
-    sort: { startDate: -1 },
-    limit: 10,
-    done: (data, err) => {
-      if (err) {
-        console.log("erreur recup gamesList")
-      } else {
-        if (data.length) {
-          for (let i = 0; data[i]; i++) {
-            let game = {};
-            game.startDate = tool.dateSimple(data[i].startDate);
-            game.duration = tool.duration(data[i].startDate, data[i].endDate)
-            game.players = data[i].players;
-            game.nbRoundsPlayed = data[i].nbRoundsPlayed;
-            gamesList.push(game);
-          }
-          ;
-        }
-
-      } // fin else
-
-    } // fin done
-
-  }) // fin dbQuery
-  return gamesList;
-}
-
-const sendWordDefinition = function (room) {
-  room.nbRoundsPlayed++;
-  room.quizWord = room.selectedWords[room.nbRoundsPlayed - 1].word;
-  room.quizDefinition = room.selectedWords[room.nbRoundsPlayed - 1].definition;
-  console.log('> sendWordDefinition', room.quizWord, room.quizDefinition);
-  // Envoyer la question à tous les joueurs de la salle
-  const quizMsg = {
-    word: `Tour n° ${room.nbRoundsPlayed} - Mot de ${room.quizWord.length} lettres.`,
-    definition: `Définition : ${room.quizDefinition}`
-  }
-  ioServer.to(room.name).emit('quiz', quizMsg);
-}
-
-const rankPlayers = function (room) {
-  // TODO
-}
 
 /*============================================*
 *    Un utilisateur se connecte... 
@@ -244,7 +177,7 @@ ioServer.on("connect", function (ioSocket) {
   // Récupérer les dernières parties en base
 
   const lists = {
-    gamesList: getGamesList(),
+    gamesList: gameFct.getGamesList(),
     roomsList: roomsList,
     connections: connections
   }
@@ -368,7 +301,7 @@ ioServer.on("connect", function (ioSocket) {
       ioSocket.emit("alreadyInRoom");
     } else {
       // Rechercher la salle    
-      let room = getRoom(roomName);
+      let room = gameFct.getRoom(roomsList, roomName);
 
       // salle trouvée
       if (room) {
@@ -389,7 +322,7 @@ ioServer.on("connect", function (ioSocket) {
           ioServer.emit('updateRoomsList', roomsList);
           ioServer.emit('updateConnections', connections);
           ioServer.to(room.name).emit('msgAllRoom', '<b>La partie commence...</b>');
-          sendWordDefinition(room);
+          ioServer.to(room.name).emit('quiz', gameFct.sendWordDefinition(room));
         }
 
       } else {
@@ -409,7 +342,7 @@ ioServer.on("connect", function (ioSocket) {
   ioSocket.on("answer", function (answer) {
 
     // Rechercher la salle du joueur
-    let room = getRoom(ioSocket.player.roomName);
+    let room = gameFct.getRoom(roomsList, ioSocket.player.roomName);
 
     /*--------------------------------------------*
      *         c'est la bonne :)
@@ -419,7 +352,7 @@ ioServer.on("connect", function (ioSocket) {
 
       // mise à jour du score du joueur
       ioSocket.player.score++;
-      updateScore(room.players, ioSocket.id);
+      gameFct.updateScore(room.players, ioSocket.id);
 
       // Envoyer à tous les joueurs de la salle la bonne réponse trouvée et la mise à jour du score du joueur gagnant      
       const message = `${ioSocket.player.pseudo} a trouvé : <b>${room.quizWord.toUpperCase()}</b>`;
@@ -428,16 +361,21 @@ ioServer.on("connect", function (ioSocket) {
       ioServer.to(room.name).emit('updateRoomPlayers', room.players);
 
       // fin de partie
-      if (room.nbRoundsPlayed == room.selectedWords.length) {
+      // if (room.nbRoundsPlayed == room.selectedWords.length) {
+      if (room.nbRoundsPlayed == 3) {
         // TODO
-        rankPlayers(room);
+        gameFct.rankPlayers(room);
+        ioServer.to(room.name).emit('playersRanking', room.players);
+        let game;
+        // TODO insérer game en db
+        // TODO prévoir fermeture salle et libérer les joueurs
+        gameFct.addGamesList(gamesList, game);
+
       } else {
         // Nouvelle définition à envoyer aux joueurs de la salle
         console.log('room.selectedWords', room.selectedWords);
-        sendWordDefinition(room);
+        ioServer.to(room.name).emit('quiz', gameFct.sendWordDefinition(room));
       }
-
-
 
     } else {
 
@@ -452,13 +390,21 @@ ioServer.on("connect", function (ioSocket) {
 
   });
 
-  
+
   /*============================================*
    *     ...il veut quitter une salle
    *============================================*/
 
   ioSocket.on("leaveRoom", function (roomName) {
     // TODO
+    ioSocket.leave(roomName);
+    delete(ioSocket.player.roomName);
+    // vérifier que c'est bien supprimé au niveau de l'obj connection
+    const room = gameFct.getRoom(roomsList, roomName);
+    const indexofPlayer = gameFct.getIndexofPlayer(room.players, ioSocket.player.pseudo);
+    room.players.splice(indexofPlayer, 1);
+    ioServer.to(room.name).emit('updateRoomPlayers', room.players);
+    ioServer.emit('updateConnections', connection);
   });
 
   /*========================================*
@@ -470,13 +416,13 @@ ioServer.on("connect", function (ioSocket) {
     console.log('>disconnect');
     if (ioSocket.player) {
       if (ioSocket.player.roomName) {
-        let room = getRoom(ioSocket.player.roomName);
+        let room = gameFct.getRoom(roomsList, ioSocket.player.roomName);
         console.log('joueur déconnecté en salle ', room);
         ioServer.to(room.name).emit('updateRoom', room.name);
       }
     }
-
-    connections.splice(connections.indexOf(ioSocket), 1);
+    const indexofConnection = gameFct.getIndexofConnection(connections,ioSocket.id);
+    connections.splice(indexofConnection, 1);
     // TODO màj côté client
     ioServer.emit('connectionsUpdate', connections)
     console.log("> disconnect : nb connexions en cours",

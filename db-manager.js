@@ -1,9 +1,11 @@
+'use strict'
+
 const MongoClient = require('mongodb').MongoClient;
 
 const urlDb = 'mongodb://localhost:27017';
 const dbName = 'jeu-back';
 
-connectDb = (callback) => {
+const connectDb = (callback) => {
   MongoClient.connect(urlDb, { useUnifiedTopology: true }, (err, client) => {
     if (err) return;
     const db = client.db(dbName);    

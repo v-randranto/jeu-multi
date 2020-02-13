@@ -1,4 +1,5 @@
-"use strict"
+'use strict'
+
 const dbQuery = require('./db-manager');
 const uuidv4 = require('uuid/v4');
 
