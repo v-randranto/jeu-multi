@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+html(lang="fr")
+    head
+        meta(charset="UTF-8")
+        title Accueil   
+        link(rel="stylesheet", href="css/style.css")     
+    body
+        - var pseudoValue = '';
+        - if (pseudo) pseudoValue = pseudo;
+               
+        form(id="registerForm" action="/register", method="POST")
+            p Pseudo : 
+                input(type="text", name="pseudo" value=pseudoValue,    onfocus="this.value=''")
+            p Mot de passe : 
+                input(type="text", name="pwd", onfocus="thivalue=''")
+            p Confirmation mot de passe : 
+                input(type="text", name="confirm")
+            p 
+                button Valide
+            p(class="msg error")=msgError             
+            p(class="msg info")=msgInfos 
+        p 
+            a(href="/login" class="connectLink") On se connait? c'est ici 

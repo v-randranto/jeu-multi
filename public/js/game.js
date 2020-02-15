@@ -2,9 +2,8 @@
  *  FRONT : GESTION DU JEU - CONNEXION SOCKET.IO
  * TODO commentaires
  ****************************************************************/
-//var hostName = '192.168.1.50';
-var hostName = '192.168.1.11';
-//var hostName =  '192.168.105.70';    
+var hostName = '192.168.1.50';
+//var hostName = '192.168.1.11';    
 
 var htmlPlayForm = document.getElementById('playForm');
 
@@ -17,6 +16,7 @@ var htmlInitGameBtn = document.getElementById('initGameBtn');
 
 var htmlRoom = document.getElementById('room');
 var htmlRoomPlayers = document.getElementById('roomPlayers');
+var htmlRoomMsg = document.getElementById('msgRoom');
 var htmlQuiz = document.getElementById('quiz');
 var htmlAnswserForm = document.getElementById('answerForm');
 
@@ -28,42 +28,56 @@ var updateGamesList = function (gamesList) {
     console.log('>updateGamesList')
     // mise à jour de la liste des parties
     var htmlList = document.querySelector('#gamesList ul');
+    if (!htmlList) {
+        htmlList = document.createElement('ul');
+        htmlGamesList.appendChild(htmlList);
+    }
     htmlList.innerHTML = '';
     //TODO afficher dans un tableau
     for (var i = 0; gamesList[i]; i++) {
         var game = gamesList[i];
         console.log('game ', game)
         var htmlItem = document.createElement('li');
-
         htmlItem.innerHTML = `Partie du ${game.startDate}, durée ${game.duration}`;
         htmlList.appendChild(htmlItem);
     }
 }
 
-var updateRoomsList = function (roomsList) {
+var updateRoomsList = function (roomsList, ioSocketId) {
     console.log('> updateRoomsList')
     // mise à jour de la liste des salles
     var htmlList = document.querySelector('#roomsList ul');
+    if (!htmlList) {
+        htmlList = document.createElement('ul');
+        htmlRoomsList.appendChild(htmlList);
+    }
     htmlList.innerHTML = '';
     for (var i = 0; roomsList[i]; i++) {
         var room = roomsList[i];
         var htmlItem = document.createElement('li');
         var status = room.accessible ? 'accessible' : 'verrouillée';
         htmlItem.innerHTML = `Salle de ${room.name} ${status}`;
-        // Les salles accessibles sont cliquables
-        // TODO sauf pour le joueur qui l'a crée
+        // Les salles accessibles sont cliquables mais un taulier ne doit pas pouvoir cliquer sa salle
         if (room.accessible) {
-            htmlItem.id = room.name;
-            htmlItem.classList.add('clickable')
+            if (ioSocketId !== room.socketId) {
+                htmlItem.id = room.name;
+                htmlItem.classList.add('clickable');
+            }
+
         }
         htmlList.appendChild(htmlItem);
     }
+
 }
 
 var updateConnections = function (connections) {
     console.log('> updateConnections')
     // mise à jour de la liste des joueurs connectés
     var htmlList = document.querySelector('#connections ul');
+    if (!htmlList) {
+        htmlList = document.createElement('ul');
+        htmlConnections.appendChild(htmlList);
+    }
     htmlList.innerHTML = '';
     for (var i = 0; connections[i]; i++) {
         var player = connections[i].player;
@@ -75,17 +89,23 @@ var updateConnections = function (connections) {
 }
 
 var updateRoomPlayers = function (roomPlayers) {
-    console.log('> updateRoom')
-    // mise à jour de la salle à laquelle un joueur participe
-    htmlRoom.style.visibility = "visible";
-    htmlRoomPlayers.innerHTML = "";
+    console.log('> updateRoomPlayers')
+    // mise à jour de la salle à laquelle un joueur participe    
+    htmlRoomPlayers.innerHTML = '';
     for (var i = 0; roomPlayers[i]; i++) {
         var player = roomPlayers[i];
-        var htmlPlayer = document.createElement('p')
+        var htmlPlayer = document.createElement('p');
         htmlPlayer.id = player.idSession;
         htmlPlayer.classList.add('player');
         htmlPlayer.innerHTML = `${player.pseudo} ${player.score} points.`;
         htmlRoomPlayers.appendChild(htmlPlayer);
+    }
+    var htmlStartBtn = document.getElementById('startGameBtn');
+    // s'il y au moins 2 joueurs, le taulier peut cliquer sur le bouton 'démarrer'
+    if (htmlStartBtn) {
+        if (htmlStartBtn.disabled || roomPlayers.length >= 2) {
+            htmlStartBtn.disabled = false;
+        }
     }
 }
 
@@ -93,17 +113,19 @@ var displayRanking = function (roomPlayers) {
     console.log('> displayRanking')
     // 
     htmlInitGameBtn.disabled = false;
+    // les joueurs et le quiz ne sont plus affichés
     document.getElementById('quiz').innerHTML = '';
-    var htmlRanking = document.getElementById('ranking');
+    htmlRoomPlayers.innerHTML = '';
+    htmlRoomMsg.innerHTML = '';
+    // affichage du classement fourni par le serveur
     var htmlList = document.createElement('ul');
-
     for (var i = 0; roomPlayers[i]; i++) {
         var player = roomPlayers[i];
         var htmlItem = document.createElement('li');
         htmlItem.innerHTML = `<b>${player.pseudo}</b> ${player.score} points`;
         htmlList.appendChild(htmlItem);
     }
-    htmlRanking.appendChild(htmlList);
+    htmlRoomPlayers.appendChild(htmlList);
 }
 
 window.addEventListener("DOMContentLoaded", function () {
@@ -124,6 +146,7 @@ window.addEventListener("DOMContentLoaded", function () {
      *=============================================================*/
 
     ioSocket.on("connect", function () {
+        console.log('ioSocket : ', ioSocket);
 
         htmlPlayForm.addEventListener('submit', function (event) {
             console.log('> submit play form');
@@ -136,34 +159,35 @@ window.addEventListener("DOMContentLoaded", function () {
 
             document.getElementById('playForm').style.display = "none";
             htmlGamesOverview.style.visibility = "visible";
-
         })
 
-     /*--------------------------------------------------*
-     *    Affichage des listes envoyées par le serveur
-     *---------------------------------------------------*/
+        /*--------------------------------------------------*
+        *    Affichage des listes envoyées par le serveur
+        *---------------------------------------------------*/
 
-        ioSocket.on("displayLists", function (lists) {
+        ioSocket.on("updateLists", function (lists) {
 
-            // liste des parties                
+            // liste des parties 
+            htmlGamesList.innerHTML = '';
+            htmlRoomsList.innerHTML = '';
+            htmlConnections.innerHTML = '';
+
             console.log('> gamesList ', lists.gamesList);
-            var htmlList = document.createElement('ul');
-            htmlGamesList.appendChild(htmlList);
             if (lists.gamesList.length) {
                 updateGamesList(lists.gamesList);
             }
 
-            // Liste des salles ouvertes  
-            var htmlList = document.createElement('ul');
-            htmlRoomsList.appendChild(htmlList);
+            // Liste des salles ouvertes 
             console.log('> roomsList ', roomsList);
             if (lists.roomsList.length) {
                 updateRoomsList(lists.roomsList);
-                // une salle disponible est cliquable => au clic signaler au serveur d'ajouter le joueur dans la salle
-                var htmlClickableItems = document.querySelectorAll('.clickable')
-                for (var i = 0; htmlClickableItems[i]; i++) {
-                    htmlClickableItems[i].addEventListener('click', function () {
-                        ioSocket.emit("joinRoom", this.id);
+                // ajout d'un écouteur d'évént à chaque tag 'li' de classe 'clickable'
+                var htmlClickableRooms = document.querySelectorAll('.clickable')
+                for (var i = 0; htmlClickableRooms[i]; i++) {
+                    var htmlRoom = htmlClickableRooms[i];
+                    htmlRoom.addEventListener('click', function () {
+                        // le clic permet au joueur de rejoindre une salle dont le nom est dans l'id du tag 'li'
+                        ioSocket.emit("joinRoom", htmlRoom.id);
                         htmlInitGameBtn.disabled = true;
                     });
                 }
@@ -171,8 +195,6 @@ window.addEventListener("DOMContentLoaded", function () {
 
             // Liste des joueurs connectés                
             console.log('> connections ', lists.connections);
-            var htmlList = document.createElement('ul');
-            htmlConnections.appendChild(htmlList);
             if (lists.connections.length) {
                 updateConnections(lists.connections);
             }
@@ -206,51 +228,87 @@ window.addEventListener("DOMContentLoaded", function () {
             htmlInitGameBtn.disabled = true;
         });
 
-        // Le joueur ne peut initier ou rejoindre une salle car il est lui-même déjà dans une salle
-        ioSocket.on("alreadyInRoom", function () {
+        ioSocket.on("msgGames", function (message) {
             htmlInitGameBtn.disabled = false;
-            document.getElementById('msgMeGames').innerHTML = `Vous êtes déjà dans une salle.`;
-        });
-
-        // La salle que le joueur veut rejoindre n'existe pas, c'est un bug de l'appli
-        ioSocket.on("roomNotFound", function () {
-            // TODO
+            document.getElementById('msgGames').innerHTML = message;
         });
 
         // Afficher les joueurs de la salle suite à une mise à jour
-        ioSocket.on("updateRoomPlayers", function (roomPlayers) {
-            updateRoomPlayers(roomPlayers);
+        ioSocket.on("updateRoom", function (room) {
+            // si ouverture d'une salle
+            console.log('htmlRoom.style.visibility ', htmlRoom.style.visibility)
+            if ('' === htmlRoom.style.visibility || 'hidden' === htmlRoom.style.visibility) {
+                htmlRoom.style.visibility = 'visible';
+                var htmlStartBtn = document.getElementById('startGameBtn');
+                var htmlCloseBtn = document.getElementById('closeRoomBtn');
+                var htmlLeaveBtn = document.getElementById('leaveRoomBtn');
+                htmlStartBtn.style.display = 'none';
+                htmlStartBtn.disabled = true;
+                htmlCloseBtn.style.display = 'none';
+                htmlLeaveBtn.style.display = 'none';
+                console.log('ioSocket.id', ioSocket.id);
+                console.log('room.socketId', room.socketId);
+                console.log('btn styles ', htmlStartBtn.style, closeRoomBtn.style, leaveRoomBtn.style);
+                if (ioSocket.id === room.socketId) {
+                    console.log('ioSocket.id === room.socketId');
+                    htmlStartBtn.style.display = 'inline';
+                    htmlStartBtn.addEventListener('click', function () {
+                        ioSocket.emit('startGame');
+                    });
+                    htmlCloseBtn.style.display = 'inline';
+                    htmlCloseBtn.addEventListener('click', function () {
+                        ioSocket.emit('closeRoom');
+                    });
+                } else {
+                    console.log('ioSocket.id =/= room.socketId');
+                    htmlLeaveBtn.style.display = 'inline';
+                    htmlLeaveBtn.addEventListener('click', function () {
+                        ioSocket.emit('leaveRoom');
+                    });
+                }
+            }
+            updateRoomPlayers(room.players);
+        });
+
+        ioSocket.on("leaveRoom", function () {
+            htmlInitGameBtn.disabled = false;
+        });
+
+        ioSocket.on("closeRoom", function (room) {
+            htmlInitGameBtn.disabled = false;
+            document.getElementById('msgRoom').innerHTML = 'La salle est fermée';
+            document.getElementById('startGameBtn').style.display = 'none';
+            document.getElementById('closeRoomBtn').style.display = 'none';
+            document.getElementById('leaveRoomBtn').style.display = 'none';
         });
 
         // Afficher la liste des salles envoyée par le serveur suite à une mise à jour
-        ioSocket.on("updateRoomsList", function (roomsList) {
-            updateRoomsList(roomsList, ioSocket);
+        ioSocket.on('updateRoomsList', function (roomsList) {
+            updateRoomsList(roomsList, this.id);
             // Attacher un écouteur d'événements à l'élément 'li' contenant une salle clquable
             var htmlClickableItems = document.querySelectorAll('.clickable')
             for (var i = 0; htmlClickableItems[i]; i++) {
                 htmlClickableItems[i].addEventListener('click', function () {
-                    ioSocket.emit("joinRoom", this.id);
+                    ioSocket.emit('joinRoom', this.id);
                     htmlInitGameBtn.disabled = true;
                 });
             }
         });
 
-        // le joueur veut quitter la salle
-        // TODO
-        // var  htmlLeaveRoomBtn = document.getElementById('htmlLeaveRoomBtn');
-        // htmlLeaveRoomBtn.addEventListener('click', function () {
-        //     console.log('> click on leave room')
-        //     ioSocket.emit("leaveRoom");
-        // });
-
         /*---------------------------------------------------*
          *    Gestion d'une partie
          *---------------------------------------------------*/
+        // Afficher la question envoyée par le seveur
+        ioSocket.on('gameStarts', function (message) {
+            console.log('> gameStarts ', message);
+            document.getElementById('startGameBtn').disabled = true;
+            htmlRoomMsg.innerHTML = message;
+        });
 
         // Afficher la question envoyée par le seveur
-        ioSocket.on("quiz", function (quizMsg) {
+        ioSocket.on('quiz', function (quizMsg) {
             // affichage de la définition du mot 
-            htmlQuiz.style.visibility = "visible";
+            htmlQuiz.style.visibility = 'visible';
             console.log('> quiz ', quizMsg);
             document.getElementById('word').innerHTML = quizMsg.word;
             document.getElementById('definition').innerHTML = quizMsg.definition;
@@ -264,13 +322,8 @@ window.addEventListener("DOMContentLoaded", function () {
         });
 
         // Afficher le message du serveur dans la salle
-        ioSocket.on('msgToAll', function (message) {
-            document.getElementById('msgAllRoom').innerHTML = message;
-        });
-
-        // Afficher le message du serveur dans la salle
-        ioSocket.on("msgToMe", function (message) {
-            document.getElementById('msgMeRoom').innerHTML = message;
+        ioSocket.on('msgRoom', function (message) {
+            htmlRoomMsg.innerHTML = message;
         });
 
         // Afficher le message du serveur dans la salle
@@ -279,11 +332,9 @@ window.addEventListener("DOMContentLoaded", function () {
         });
 
         // Afficher le classement de la salle
-        ioSocket.on("ranking", function (roomPlayers) {
+        ioSocket.on('ranking', function (roomPlayers) {
             console.log('> ranking ');
             displayRanking(roomPlayers);
-
-            // TODO
         });
 
     });

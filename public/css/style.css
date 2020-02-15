@@ -20,13 +20,23 @@ button {
 a {
   color: antiquewhite;
 }
-#register {
-  display: none;
+
+#connexion {
+  position:relative;
+  top: 0;
+  left: 0;
 }
 
-#gamesOverview, #gameRoom,#sessionOtherId, #room, #quiz {
+#login, #register {  
+  position: absolute;
+  top: 50px;
+  left: 0;
+}
+
+#register, #gamesOverview, #gameRoom,#sessionOtherId, #room, #quiz {
   visibility: hidden;
 }
+
 .clickable {
   cursor: pointer;
 }

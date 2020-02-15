@@ -7,11 +7,12 @@ const sessionInfos = function (parameters) {
   parameters.session.pseudo = parameters.body.pseudo;
   parameters.session.otherId = uuidv4();
   console.log("exports : req session uuid ", parameters.session.otherId);
-  parameters.interpolations.pseudo = parameters.body.pseudo;
-  parameters.interpolations.otherId = parameters.session.otherId;
+  // parameters.interpolations.pseudo = parameters.body.pseudo;
+   parameters.interpolations.otherId = parameters.session.otherId;
 }
 
 exports.connect = function (parameters) {
+  parameters.interpolations.pseudo = parameters.body.pseudo;
   const result = {};
   // User already connected
   if (parameters.session.pseudo) {
@@ -35,15 +36,14 @@ exports.connect = function (parameters) {
       if (data.length) {
         userFound = data[0];
       }
-
       result.validCredentials = false;
 
       // cas d'un login
       if (parameters.login) {
-        console.log('> exports : login')
+        console.log('> exports : login');
         if (userFound) {
           if (userFound.pwd === parameters.body.pwd) {
-            console.log('> login : identifiants OK')
+            console.log('> login : identifiants OK');
             // mise en session d'infos utilisateur
             sessionInfos(parameters);
             result.validCredentials = true;
@@ -52,18 +52,17 @@ exports.connect = function (parameters) {
           }
 
         }
-        console.log('> login : identifiants KO')
-        parameters.interpolations.msgError = "Vos identifiants sont incorrects.";
+        console.log('> login : identifiants KO');
+        parameters.interpolations.msgError = 'Vos identifiants sont incorrects.';
         parameters.done(result);
         return;
       }
 
       // cas d'un register
-      console.log('> exports : register')
-      parameters.interpolations.register = true;
+      console.log('> exports : register');
       if (userFound) {
         console.log('> register : pseudo déjà pris');
-        parameters.interpolations.msgError = "Le pseudo déjà utilisé.";
+        parameters.interpolations.msgError = 'Le pseudo déjà utilisé.';
         parameters.done(result);
         return;
       }
@@ -79,16 +78,16 @@ exports.connect = function (parameters) {
           pseudo: parameters.body.pseudo,
           pwd: parameters.body.pwd,
           creationDate: Date.now()
-        }
+        };
 
         dbQuery.insert({
           collectionName: 'users',
           document: user,
           done: (resultInsert) => {
             if (resultInsert.ok == '1') {
-              console.log("insertion user OK")
+              console.log('insertion user OK');
             } else {
-              console.log("erreur insertion user")
+              console.log('erreur insertion user');
             }
             parameters.done(result);
           }
@@ -98,7 +97,7 @@ exports.connect = function (parameters) {
       }
 
       console.log('> register : identifiants KO');
-      parameters.interpolations.msgError = "Votre mot de passe et sa confirmation sont différents";
+      parameters.interpolations.msgError = 'Votre mot de passe et sa confirmation sont différents';
       parameters.done(result);
     }
   });

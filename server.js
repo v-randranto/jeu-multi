@@ -47,24 +47,38 @@ app.use(function (req, res, next) {
   next();
 });
 
-app.all('/', function (req, res, next) {
-  console.log('>app.use / ', req.originalUrl);
+app.use(function (req, res, next) {
+  console.log('>app.use ', req.url);
   // contrôler la session
-  if (req.session) {
+  if (req.url === '/login' || req.url === '/register') {
+
     if (req.session.pseudo) {
       console.log(req.session.pseudo, ' déjà connecté')
       interpolations.pseudo = req.session.pseudo;
       res.render('game', interpolations);
       return;
     }
+
   }
-  interpolations.login = true;
-  res.render('connect', interpolations);
+  next();
 });
+
+app.all('/', function (req, res, next) {
+  console.log('>app.all ', req.url);
+
+  res.render('login', interpolations);
+});
+
 
 /*================================================*
  *   Connexion d'un utilisateur connu en base
  *================================================*/
+
+app.get('/login', function (req, res, next) {
+  console.log('>app.get login ', req.originalUrl);
+  // contrôler la session  
+  res.render('login', interpolations);
+});
 
 app.post('/login', function (req, res) {
   console.log('> /login');
@@ -81,12 +95,10 @@ app.post('/login', function (req, res) {
         return;
       }
       if (result.validCredentials) {
-
         res.render('game', interpolations);
         return;
       }
-      interpolations.login = true;
-      res.render('connect', interpolations);  // TODO faire un redirect ????
+      res.render('login', interpolations);  // TODO faire un redirect ????
     }
   });
 })
@@ -94,6 +106,13 @@ app.post('/login', function (req, res) {
 /*=========================================================*
  *   Enregistrement et connexion d'un nouvel utilisateur
  *=========================================================*/
+
+app.get('/register', function (req, res, next) {
+  console.log('>app.get register ', req.originalUrl);
+  // contrôler la session
+  res.render('register', interpolations);
+});
+
 
 app.post('/register', function (req, res) {
   console.log('> /register');
@@ -110,11 +129,10 @@ app.post('/register', function (req, res) {
         return;
       }
       if (result.validCredentials) {
-        interpolations.register = true;
         res.render('game', interpolations);
         return;
       }
-      res.render('connect', interpolations);  // TODO faire un redirect ????
+      res.render('register', interpolations);  // TODO faire un redirect ????
     }
   });
 
@@ -131,7 +149,7 @@ app.all('/logout', function (req, res) {
     res.clearCookie('sid');
     //interpolations = titres.page('accueil', interpolations);
     interpolations.msgInfo = "Vous êtes déconnecté.e";
-    res.render('connect', interpolations);
+    res.render('login', interpolations);
   };
 });
 
@@ -165,6 +183,29 @@ const roomsList = [];
 const connections = [];
 const gamesList = [];
 
+const nbMaxPlayers = 5;
+const nbMaxRounds = 3;
+
+const messages = {
+  sessionNotFound: 'Session non trouvée.',
+  alreadyInRoom: 'Vous êtes déjà dans une salle.',
+  roomNotFound: 'Salle non trouvée.',
+  maxPlayersReached: 'Nombre de joueurs maximum atteint, vous pouvez démarrer la partie.',
+  notEnoughPlayers: 'Il faut au moins 2 joueurs pour commencer à jouer.',
+  gameStarts: '<b>La partie commence...</b>',
+}
+
+// une salle inactive est fermée au bout 30 minutes TDOD
+const inactivityMax = 1000 * 60 * 30
+setInterval(function () {
+  for (let i = 0; roomsList[i]; i++) {
+    const room = roomsList[i];
+    if (room.lastActivityDate - Date.now() >= inactivityMax) {
+      console.log('salle inactive', room);
+      // TODO
+    }
+  }
+}, 1000 * 60 * 10);
 
 /*============================================*
 *    Un utilisateur se connecte... 
@@ -185,11 +226,11 @@ ioServer.on("connect", function (ioSocket) {
   //gamesList = gameFct.dbGames.findGames();  
 
   console.log('listes envoyées :', lists)
-  ioSocket.emit("displayLists", lists);
+  ioSocket.emit("updateLists", lists);
 
-  /*========================================*
+  /*========================================================================*
   *         ...il veut jouer
-  *=========================================*/
+  *========================================================================*/
 
   ioSocket.on("addPlayer", function (sessionOtherId) {
     console.log('> add player uuid ', sessionOtherId);
@@ -226,7 +267,7 @@ ioServer.on("connect", function (ioSocket) {
           } else {
             console.log('session non trouvée');
             // Envoyer au client l'info que la session n'existe pas
-            ioSocket.emit('sessionNotFound');
+            ioSocket.emit('sessionNotFound', sessionNotFound);
             // TODO ioSocket.emit('disconnect');
           }
         }
@@ -235,120 +276,168 @@ ioServer.on("connect", function (ioSocket) {
 
   });
 
-  /*=============================================*
+  /*==========================================================================*
    *     ...il veut ouvrir une salle
-   *=============================================*/
+   *---------------------------------------------------------------------------
+   * Le joueur est le taulier de la salle; elle porte son pseudo, son socket id
+   * et la salle est accessible aux joueurs connectés tant que le jeu n'est pas
+   * démarré ou que le nb max de joueurs n'est pas atteint.
+   * La salle créée est ajoutée à la liste des salles en cours. 
+   *==========================================================================*/
 
   ioSocket.on("openRoom", function () {
     console.log("> server openRoom");
 
     if (ioSocket.player.roomName) {
       console.log('> joueur déjà occupé');
-      ioSocket.emit("alreadyInRoom");
-    } else {
-      // création d'une salle
-      // TODO vérifier qu'elle n'existe pas déjà (bug si c'est le cas)
-      const room = {
-        name: ioSocket.player.pseudo,
-        players: [ioSocket.player],
-        accessible: true,
-        nbRoundsPlayed: 0
-      };
-      ioSocket.join(room.name);
-      ioSocket.player.roomName = room.name;
-
-      //ajout dans la liste des salles
-      roomsList.push(room);
-
-      // Envoyer aux joueurs de la salle la mise à jour des joueurs 
-      console.log('updateRoomPlayers', room.players);
-      ioServer.to(room.name).emit('updateRoomPlayers', room.players);
-      // Envoyer à tous les joueurs la liste des salles pour réaffichage
-      ioServer.emit("updateRoomsList", roomsList);
-
-      // charger une sélection du dico dans la salle (provisoire) TODO 
-      dbQuery.find({
-        collectionName: 'dictionnary',
-        filter: {},
-        sort: {},
-        limit: 0,
-        done: (data, err) => {
-          if (err) {
-            //TODO service indisponible
-            console.log('> erreur chargement dico')
-          } else {
-            if (data.length) {
-              room.selectedWords = data;
-            } else {
-              //TODO service indisponible
-              console.log('> dico vide !!')
-            }
-          }
-
-        }
-      });
+      ioSocket.emit('msgGames', messages.alreadyInRoom);
+      return;
     }
+    // création d'une salle      
+    const room = {
+      socketId: ioSocket.id,
+      name: ioSocket.player.pseudo,
+      players: [ioSocket.player],
+      accessible: true,
+      nbRoundsPlayed: 0,
+      creationDate: Date.now()
+    };
+    ioSocket.join(room.name);
+    ioSocket.player.roomName = room.name;
+
+    //ajout dans la liste des salles
+    roomsList.push(room);
+    // Envoyer aux joueurs de la salle la mise à jour des joueurs 
+    console.log('updateRoom', room);
+    ioServer.in(room.name).emit('updateRoom', room);
+    // Envoyer à tous les joueurs la liste des salles pour réaffichage
+    ioServer.emit('updateRoomsList', roomsList);
+    // Envoyer à tous les joueurs la liste des joueurs connectés pour réaffichage
+    ioServer.emit('updateConnections', connections);
+    // charger une sélection du dico dans la salle (provisoire) TODO 
+    dbQuery.find({
+      collectionName: 'dictionnary',
+      filter: {},
+      sort: {},
+      limit: 0,
+      done: (data, err) => {
+        if (err) {
+          //TODO service indisponible
+          console.log('> erreur chargement dico')
+        } else {
+          if (data.length) {
+            room.selectedWords = data;
+          } else {
+            //TODO service indisponible
+            console.log('> dico vide !!')
+          }
+        }
+
+      }
+    });
+
 
   });
 
-  /*============================================*
+  /*==============================================================================*
    *     ...il veut rejoindre une salle
-   *============================================*/
+   *-----------------------------------------------------------------------------
+   * Le joueur qui rejoint une salle est ajouté à la liste des joueurs de la salle
+   * et on lui attache le nom de la salle. Tant qu'il est dans une salle il ne
+   * pourra pas rejoindre une autre salle.
+   * La salle est envoyée aux joueurs pour réafficher la liste des joueurs
+   * La liste des joueurs connectés est envoyée aux clients pour montrer son 
+   * indisponibilité. 
+   * Si le nombre de joueurs maximum est atteint, la salle devient inaccessible.
+   *=============================================================================*/
 
   ioSocket.on("joinRoom", function (roomName) {
 
     // Le joueur ne doit pas être dans une autre salle
     if (ioSocket.player.roomName) {
       console.log('> joueur déjà occupé');
-      ioSocket.emit("alreadyInRoom");
-    } else {
-      // Rechercher la salle    
-      let room = gameFct.manageRoom.getRoom(roomsList, roomName);
+      ioSocket.emit('msgGames', messages.alreadyBusy);
+      return;
+    }
+    // Rechercher la salle    
+    let room = gameFct.manageRoom.getRoom(roomsList, roomName);
 
-      // salle trouvée
-      if (room) {
-        // Ajouter le joueur dans la salle        
-        ioSocket.player.roomName = roomName;
-        ioSocket.join(roomName);
-        room.players.push(ioSocket.player);
-        console.log('add player in room ', room)
+    // salle trouvée
+    if (room) {
+      // Ajouter le joueur dans la salle        
+      ioSocket.player.roomName = roomName;
+      ioSocket.join(roomName);
+      room.players.push(ioSocket.player);
+      room.lastActivityDate = Date.now();
+      console.log('add player in room ', room);
 
-        // Envoyer à tous les joueurs de la salle la liste de ses joueurs suite à l'ajout
-        ioServer.to(room.name).emit('updateRoomPlayers', room.players);
-        // Envoyer à tous les joueurs connectés la liste des connexions suite à indisponibilité de ce joueur
-        ioServer.emit('updateConnections', connections);
+      // Envoyer à tous les joueurs de la salle la liste de ses joueurs suite à l'ajout
+      ioServer.in(room.name).emit('updateRoom', room);
+      // Envoyer à tous les joueurs connectés la liste des connexions suite à indisponibilité de ce joueur
+      ioServer.emit('updateConnections', connections);
 
-        // Le nombre de joueurs max dans une salle est atteinte
-        if (room.players.length == 2) {
-          room.accessible = false;
-          room.startDate = Date.now();
-          console.log('salle inaccessible => màj liste ', roomsList);
-          // Envoyer à tous les joueurs connectés la liste des salles suite à inaccessibilité de cette salle
-          ioServer.emit('updateRoomsList', roomsList);
-          // Envoyer la 1ère question aux joueurs de la salle
-          ioServer.to(room.name).emit('msgAllRoom', '<b>La partie commence...</b>');
-          ioServer.to(room.name).emit('quiz', gameFct.manageRoom.sendWordDefinition(room));
-        }
-
-      } else {
-        //TODO ça ne devrait pas arriver, auquel cas c'est un bogue
-        console.log('salle non trouvée')
-        ioSocket.emit('roomNotFound');
+      // Le nombre de joueurs max dans une salle est atteinte
+      if (room.players.length == nbMaxPlayers) {
+        room.accessible = false;
+        console.log('salle inaccessible => màj liste ', roomsList);
+        // Envoyer à tous les joueurs connectés la liste des salles suite à inaccessibilité de cette salle
+        ioServer.emit('updateRoomsList', roomsList);
+        // Informer le créateur de la salle qu'il peut démarrer
+        ioServer.in(`${room.socketId}`).emit('msgRoom', messages.maxPlayersReached);
       }
 
+    } else {
+      //TODO ça ne devrait pas arriver, auquel cas c'est un bogue
+      console.log('salle non trouvée')
+      ioSocket.emit('msgGames', messages.roomNotFound);
     }
 
   });
 
-  /*============================================*
+  /*===========================================================================*
+   *     ... il veut démarrer la partie
+   *---------------------------------------------------------------------------
+   * On s'assure que c'est bien le taulier qui démarre le jeu TODO
+   * Ensuite, le jeu ne peut démarrer que s'il y a au moins 2 joueurs.
+   * La salle devient inaccessible, la liste des salles est envoyée à tous les 
+   * joueurs connectés pour afficher son indisponibilité.
+   * La 1ère définition est envoyée aux joueurs.
+   *===========================================================================*/
+
+  ioSocket.on("startGame", function () {
+    let room = gameFct.manageRoom.getRoom(roomsList, ioSocket.player.roomName);
+
+    if (!room.accessible) {
+      console.log('salle inaccessible, jeu déjà démarré');
+      // TODO rendre le bouton disabled
+      return;
+    }
+
+    if (room.players.length < 2) {
+      ioSocket.emit('msgRoom', messages.notEnoughPlayers);
+      return;
+    }
+
+    room.startDate = Date.now();
+    room.accessible = false;
+    room.lastActivityDate = Date.now();
+    console.log('salle inaccessible => màj liste ', roomsList);
+    // Envoyer à tous les joueurs connectés la liste des salles suite à inaccessibilité de cette salle
+    ioServer.emit('updateRoomsList', roomsList);
+    // Envoyer la 1ère question aux joueurs de la salle
+    ioServer.in(room.name).emit('gameStarts', messages.gameStarts);
+    ioServer.in(room.name).emit('quiz', gameFct.manageRoom.sendWordDefinition(room));
+  });
+
+  /*==========================================================================*
   *     ...il donne une réponse au quiz
-  *============================================*/
+  *===========================================================================*/
 
   ioSocket.on("answer", function (answer) {
 
     // Rechercher la salle du joueur
     let room = gameFct.manageRoom.getRoom(roomsList, ioSocket.player.roomName);
-
+    room.lastActivityDate = Date.now();
     /*--------------------------------------------*
      *         c'est la bonne :)
      *--------------------------------------------*/
@@ -358,44 +447,45 @@ ioServer.on("connect", function (ioSocket) {
       // mise à jour du score du joueur
       ioSocket.player.score++;
       gameFct.manageRoom.updateScore(room.players, ioSocket.id);
-
       // Envoyer à tous les joueurs de la salle la bonne réponse trouvée et la mise à jour du score du joueur gagnant      
       const message = `${ioSocket.player.pseudo} a trouvé : <b>${room.quizWord.toUpperCase()}</b>`;
+      ioServer.in(room.name).emit('msgRoom', message);
+      ioServer.in(room.name).emit('updateRoom', room);
 
-      ioServer.to(room.name).emit('msgToAll', message);
-      ioServer.to(room.name).emit('updateRoomPlayers', room.players);
-
-      // fin de partie 
-      // if (room.nbRoundsPlayed == room.selectedWords.length) {
-      if (room.nbRoundsPlayed == 2) {
+      // fin de partie       
+      if (room.nbRoundsPlayed === nbMaxRounds) {
         // TODO à sortir ? 
         // Envoyer le classement des joueurs
         room.players = gameFct.manageRoom.rankPlayers(room.players);
         console.log('classement :', room.players)
-        ioServer.to(room.name).emit('ranking', room.players);
-        // libérer les joueurs avec room ou connections ???
-        for (var i=0; room.players[i]; i++) {
-          delete(room.players[i].roomName);
-          delete(room.players[i].idSession);
+        ioServer.in(room.name).emit('ranking', room.players);
+
+        // Fermeture de la salle
+
+        // libérer les joueurs 
+        for (var i = 0; room.players[i]; i++) {
+          delete (room.players[i].roomName);
         }
-        console.log('room players nettoyés', room.players);
         // Enregistrer en base la partie
         let game = {
           startDate: room.startDate,
           endDate: Date.now(),
           players: room.players
         };
-        
         gameFct.dbGames.insertGame(game);  // asynchrone TODO à compléter
-        // TODO setTimeout pour fermer la salle et libérer les joueurs qui y traîneraient encore
+        game.startDate = tool.dateSimple(game.startDate);
+        game.duration = tool.duration(game.endDate, game.startDate);
         gamesList.push(game);
-        ioServer.emit('updateGamesList', gamesList);
-        ioServer.emit('updateConnections', connections);
+        console.log('gamesList après push', gamesList);
+        // salle retirée de la liste des salles en cours
+        const indexofRoom = gameFct.getIndexof.room(roomsList, room.name);
+        roomsList.splice(indexofRoom, 1);
+        ioServer.in(room.name).emit('updateLists', lists);
 
       } else {
         // Nouvelle définition à envoyer aux joueurs de la salle
         console.log('room.selectedWords', room.selectedWords);
-        ioServer.to(room.name).emit('quiz', gameFct.manageRoom.sendWordDefinition(room));
+        ioServer.in(room.name).emit('quiz', gameFct.manageRoom.sendWordDefinition(room));
       }
 
     } else {
@@ -403,34 +493,78 @@ ioServer.on("connect", function (ioSocket) {
       /*------------------------------------------*
       *        c'est tout faux :(
       *-------------------------------------------*/
-      // Envoyer au joueur que c'est la mauvaise réponse
-      //ioSocket.emit('answerMsg', 'Mauvaise réponse');
+      // Envoyer aux joueurs de la salle la réponse fournie
       const message = `${ioSocket.player.pseudo} dit <b>${answer.toUpperCase()}</b>: mauvaise réponse`;
-      ioServer.to(room.name).emit('msgToAll', message);
+      ioServer.in(room.name).emit('msgRoom', message);
     }
 
   });
 
+  /*==========================================================================*
+   *     ...il veut quitter la salle
+   *==========================================================================*/
 
-  /*============================================*
-   *     ...il veut quitter une salle
-   *============================================*/
+  ioSocket.on('leaveRoom', function () {
+    const room = gameFct.manageRoom.getRoom(roomsList, ioSocket.player.roomName);
+    ioSocket.leave(room.name);
+    delete (ioSocket.player.roomName);
 
-  ioSocket.on("leaveRoom", function (roomName) {
-    // TODO
-    ioSocket.leave(roomName);
-    delete(ioSocket.player.roomName);
-    // vérifier que c'est bien supprimé au niveau de l'obj connection
-    const room = gameFct.manageRoom.getRoom(roomsList, roomName);
     const indexofPlayer = gameFct.getIndexof.player(room.players, ioSocket.player.pseudo);
     room.players.splice(indexofPlayer, 1);
-    ioServer.to(room.name).emit('updateRoomPlayers', room.players);
-    ioServer.emit('updateConnections', connection);
+    room.lastActivityDate = Date.now();
+    ioSocket.emit('leaveRoom');
+    ioServer.in(room.name).emit('updateRoom', room);
+    ioServer.emit('updateConnections', connections);
+    if (room.players.length < 2) {
+      ioSocket.emit('closeRoom', room);
+    }
+
   });
 
-  /*========================================*
+  /*==========================================================================*
+   *     ...il veut fermer la salle
+   *==========================================================================*/
+
+  ioSocket.on('closeRoom', function () {
+    // TODO
+    const room = gameFct.manageRoom.getRoom(roomsList, ioSocket.player.roomName);
+    room.lastActivityDate = Date.now();
+    // libérer les joueurs 
+    for (var i = 0; room.players[i]; i++) {
+      delete (room.players[i].roomName);
+    }
+
+    if (room.nbRoundsPlayed === 0) {
+      room.accessible = false;
+    } else {
+      // Envoyer le classement des joueurs
+      room.players = gameFct.manageRoom.rankPlayers(room.players);
+      console.log('classement :', room.players)
+      ioServer.in(room.name).emit('ranking', room.players);
+
+      // Enregistrer en base la partie
+      let game = {
+        startDate: room.startDate,
+        endDate: Date.now(),
+        players: room.players
+      };
+
+      gameFct.dbGames.insertGame(game);  // asynchrone TODO à compléter
+      game.startDate = tool.dateSimple(game.startDate);
+      game.duration = tool.duration(game.startDate, game.startDate);
+      gamesList.push(game);
+      console.log('gamesList après push', gamesList);
+    }
+    const indexofRoom = gameFct.getIndexof.room(roomsList, room.name);
+    roomsList.splice(indexofRoom, 1);
+    ioServer.in(room.name).emit('closeRoom', room);
+    console.log('updateLists', lists);
+    ioServer.emit('updateLists', lists);
+  });
+
+  /*===========================================================================*
    *      Déconnection d'un joueur
-   *========================================*/
+   *===========================================================================*/
 
   ioSocket.on("disconnect", function () {
 
@@ -438,11 +572,12 @@ ioServer.on("connect", function (ioSocket) {
     if (ioSocket.player) {
       if (ioSocket.player.roomName) {
         let room = gameFct.manageRoom.getRoom(roomsList, ioSocket.player.roomName);
+        room.lastActivityDate = Date.now();
         console.log('joueur déconnecté en salle ', room);
-        ioServer.to(room.name).emit('updateRoom', room.name);
+        ioServer.in(room.name).emit('updateRoom', room.name);
       }
     }
-    const indexofConnection = gameFct.getIndexof.connection(connections,ioSocket.id);
+    const indexofConnection = gameFct.getIndexof.connection(connections, ioSocket.id);
     connections.splice(indexofConnection, 1);
     // TODO màj côté client
     ioServer.emit('connectionsUpdate', connections)
