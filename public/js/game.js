@@ -128,6 +128,15 @@ var displayRanking = function (roomPlayers) {
     htmlRoomPlayers.appendChild(htmlList);
 }
 
+var resetRoom = function () {
+    htmlRoomPlayers.innerHTML = '';
+    htmlRoomMsg.innerHTML = '';
+    htmlQuiz.innerHTML = '';
+    document.getElementById('startGameBtn').style.display = 'none';
+    document.getElementById('closeRoomBtn').style.display = 'none';
+    document.getElementById('leaveRoomBtn').style.display = 'none';
+}
+
 window.addEventListener("DOMContentLoaded", function () {
 
 
@@ -234,44 +243,52 @@ window.addEventListener("DOMContentLoaded", function () {
         });
 
         // Afficher les joueurs de la salle suite à une mise à jour
-        ioSocket.on("updateRoom", function (room) {
+        ioSocket.on("displayRoom", function (room, create) {
             // si ouverture d'une salle
             console.log('htmlRoom.style.visibility ', htmlRoom.style.visibility)
-            if ('' === htmlRoom.style.visibility || 'hidden' === htmlRoom.style.visibility) {
-                htmlRoom.style.visibility = 'visible';
-                var htmlStartBtn = document.getElementById('startGameBtn');
-                var htmlCloseBtn = document.getElementById('closeRoomBtn');
-                var htmlLeaveBtn = document.getElementById('leaveRoomBtn');
-                htmlStartBtn.style.display = 'none';
-                htmlStartBtn.disabled = true;
-                htmlCloseBtn.style.display = 'none';
-                htmlLeaveBtn.style.display = 'none';
-                console.log('ioSocket.id', ioSocket.id);
-                console.log('room.socketId', room.socketId);
-                console.log('btn styles ', htmlStartBtn.style, closeRoomBtn.style, leaveRoomBtn.style);
-                if (ioSocket.id === room.socketId) {
-                    console.log('ioSocket.id === room.socketId');
-                    htmlStartBtn.style.display = 'inline';
-                    htmlStartBtn.addEventListener('click', function () {
-                        ioSocket.emit('startGame');
-                    });
-                    htmlCloseBtn.style.display = 'inline';
-                    htmlCloseBtn.addEventListener('click', function () {
-                        ioSocket.emit('closeRoom');
-                    });
-                } else {
-                    console.log('ioSocket.id =/= room.socketId');
-                    htmlLeaveBtn.style.display = 'inline';
-                    htmlLeaveBtn.addEventListener('click', function () {
-                        ioSocket.emit('leaveRoom');
-                    });
-                }
+            if (create || ioSocket.id !== room.socketId) {
+            htmlRoom.style.visibility = 'visible';
+            var htmlStartBtn = document.getElementById('startGameBtn');
+            var htmlCloseBtn = document.getElementById('closeRoomBtn');
+            var htmlLeaveBtn = document.getElementById('leaveRoomBtn');
+            htmlStartBtn.disabled = true;
+            htmlStartBtn.style.display = 'none';
+            htmlCloseBtn.style.display = 'none';
+            htmlLeaveBtn.style.display = 'none';
+            console.log('ioSocket.id', ioSocket.id);
+            console.log('room.socketId', room.socketId);
+            console.log('btn styles ', htmlStartBtn.style, closeRoomBtn.style, leaveRoomBtn.style);
+            if (ioSocket.id === room.socketId) {
+                console.log('ioSocket.id === room.socketId');
+                htmlStartBtn.style.display = 'inline';
+                htmlStartBtn.addEventListener('click', function () {
+                    ioSocket.emit('startGame');
+                });
+                htmlCloseBtn.style.display = 'inline';
+                htmlCloseBtn.addEventListener('click', function () {
+                    ioSocket.emit('closeRoom');
+                });
+            } else {
+                console.log('ioSocket.id =/= room.socketId');
+                htmlLeaveBtn.style.display = 'inline';
+                htmlLeaveBtn.addEventListener('click', function () {
+                    ioSocket.emit('leaveRoom');
+                });
             }
+        }
+
             updateRoomPlayers(room.players);
         });
 
         ioSocket.on("leaveRoom", function () {
             htmlInitGameBtn.disabled = false;
+            resetRoom();
+        });
+
+        ioSocket.on("playerLeaveRoom", function (roomPlayers, message) {
+            htmlInitGameBtn.disabled = false;
+            htmlRoomMsg.innerHTML = message;
+            updateRoomPlayers(roomPlayers);
         });
 
         ioSocket.on("closeRoom", function (room) {
@@ -293,6 +310,12 @@ window.addEventListener("DOMContentLoaded", function () {
                     htmlInitGameBtn.disabled = true;
                 });
             }
+        });
+
+        // Afficher la liste des salles envoyée par le serveur suite à une mise à jour
+        ioSocket.on('updateRoomPlayers', function (roomPlayers) {
+            updateRoomPlayers(roomPlayers);
+            
         });
 
         /*---------------------------------------------------*
@@ -327,8 +350,9 @@ window.addEventListener("DOMContentLoaded", function () {
         });
 
         // Afficher le message du serveur dans la salle
-        ioSocket.on("answerMsg", function (message) {
+        ioSocket.on('wordFound', function (message, roomPlayers) {
             document.getElementById('answerMsg').innerHTML = message;
+            updateRoomPlayers(roomPlayers)
         });
 
         // Afficher le classement de la salle
