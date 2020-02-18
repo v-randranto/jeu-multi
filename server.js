@@ -21,6 +21,7 @@ const app = express();
 /* Template engine */
 app.set('view engine', 'pug');
 
+const PORT = process.env.PORT || 3000;
 /**
  *  Middlewares 
  */
@@ -167,7 +168,8 @@ app.use(function (req, res, next) {
   res.render('error', interpolations);
 });
 
-const HTTPServer = app.listen(8080, function () {
+
+const HTTPServer = app.listen(PORT, function () {
   console.log("Express HTTP Server listening on 8080");
 });
 
