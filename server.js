@@ -26,7 +26,7 @@ app.set('view engine', 'pug');
  */
 const options = {
   store: new MongoStore({
-    url: 'mongodb://localhost/jeu-back',
+    url: 'mongodb+srv://jeumulti:ifocop@cluster0-lfexs.mongodb.net/jeu-back',
     ttl: 60 * 60, // expiration après une heure
     collection: 'sessions'
   }),
