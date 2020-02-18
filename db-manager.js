@@ -2,11 +2,15 @@
 
 const MongoClient = require('mongodb').MongoClient;
 
-const urlDb = 'mongodb://localhost:27017';
-const dbName = 'jeu-back';
+// const urlDb = 'mongodb://localhost:27017';
+// const dbName = 'jeu-back';
+const urlDb = 'mongodb+srv://jeumulti:ifocop@cluster0-lfexs.mongodb.net/test';
+const dbName = 'jeu-multi';
 
 const connectDb = (callback) => {
+  console.log('> connectDb');
   MongoClient.connect(urlDb, { useUnifiedTopology: true }, (err, client) => {
+    console.log('connecting...');
     if (err) return;
     const db = client.db(dbName);    
     callback(db, client);
