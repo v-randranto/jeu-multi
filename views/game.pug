@@ -26,23 +26,23 @@ html(lang="en")
             p(id="msgGames")
 
         #room 
-            #roomPlayers
-            p(id="msgRoom")
-            button(id="startGameBtn") Démarrer la partie
-            button(id="closeRoomBtn") Fermer la salle
-            button(id="leaveRoomBtn") Quitter la salle          
+            #roomPlayers 
+            #roomButtons          
+                button(id="startGameBtn") Démarrer la partie
+                button(id="closeRoomBtn") Fermer la salle
+                button(id="leaveRoomBtn") Quitter la salle  
+            p(id="msgRoom")        
             #quiz
                 p(id="word")
-                p(id="definition")
-            
+                p(id="definition") 
+                p(id="msgAnswer")           
                 form(id="answerForm")
                     p Votre réponse : 
                         input(type="text", name="answer", onfocus="this.value=''" )
                     p 
                         input(type="submit", value="Envoyer")
-                    p(id="answerMsg")
 
-        script(src="http://localhost:8080/socket.io/socket.io.js")
+        script(src="http://localhost:3000/socket.io/socket.io.js")
         //script(src="http://192.168.1.11:8080/socket.io/socket.io.js")
         //script(src="http://192.168.1.50:8080/socket.io/socket.io.js")
         script(src="../js/game.js")

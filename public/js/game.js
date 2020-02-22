@@ -17,6 +17,7 @@ var htmlInitGameBtn = document.getElementById('initGameBtn');
 
 var htmlRoom = document.getElementById('room');
 var htmlRoomPlayers = document.getElementById('roomPlayers');
+var htmlRoomButtons = document.getElementById('roomButtons');
 var htmlRoomMsg = document.getElementById('msgRoom');
 var htmlQuiz = document.getElementById('quiz');
 var htmlAnswserForm = document.getElementById('answerForm');
@@ -117,8 +118,11 @@ var displayRanking = function (roomPlayers) {
     // les joueurs et le quiz ne sont plus affichés
     document.getElementById('quiz').innerHTML = '';
     htmlRoomPlayers.innerHTML = '';
+    htmlRoomButtons.style.visibility = 'hidden';
     htmlRoomMsg.innerHTML = '';
     // affichage du classement fourni par le serveur
+    var htmlTitreH3 = document.createElement('h3');
+    htmlTitreH3.innerHTML = 'Classement';
     var htmlList = document.createElement('ul');
     for (var i = 0; roomPlayers[i]; i++) {
         var player = roomPlayers[i];
@@ -126,6 +130,7 @@ var displayRanking = function (roomPlayers) {
         htmlItem.innerHTML = `<b>${player.pseudo}</b> ${player.score} points`;
         htmlList.appendChild(htmlItem);
     }
+    htmlRoomPlayers.appendChild(htmlTitreH3);
     htmlRoomPlayers.appendChild(htmlList);
 }
 
@@ -133,9 +138,10 @@ var resetRoom = function () {
     htmlRoomPlayers.innerHTML = '';
     htmlRoomMsg.innerHTML = '';
     htmlQuiz.innerHTML = '';
-    document.getElementById('startGameBtn').style.display = 'none';
-    document.getElementById('closeRoomBtn').style.display = 'none';
-    document.getElementById('leaveRoomBtn').style.display = 'none';
+    htmlRoomButtons.style.visibility = 'hidden';
+    // document.getElementById('startGameBtn').style.display = 'none';
+    // document.getElementById('closeRoomBtn').style.display = 'none';
+    // document.getElementById('leaveRoomBtn').style.display = 'none';
 }
 
 window.addEventListener("DOMContentLoaded", function () {
@@ -145,10 +151,7 @@ window.addEventListener("DOMContentLoaded", function () {
      * CONNEXION SOCKET.IO 
      * TODO: commentaires
      **********************************************************/
-
-
-
-    var ioSocket = io(`http://${hostName}:8080`, function () {
+    var ioSocket = io(`http://${hostName}:3000`, function () {
     });
 
     /*=============================================================*
@@ -197,7 +200,7 @@ window.addEventListener("DOMContentLoaded", function () {
                     var htmlRoom = htmlClickableRooms[i];
                     htmlRoom.addEventListener('click', function () {
                         // le clic permet au joueur de rejoindre une salle dont le nom est dans l'id du tag 'li'
-                        ioSocket.emit("joinRoom", htmlRoom.id);
+                        ioSocket.emit("joinRoom", this.id);
                         htmlInitGameBtn.disabled = true;
                     });
                 }
@@ -253,6 +256,7 @@ window.addEventListener("DOMContentLoaded", function () {
                 var htmlCloseBtn = document.getElementById('closeRoomBtn');
                 var htmlLeaveBtn = document.getElementById('leaveRoomBtn');
                 htmlStartBtn.disabled = true;
+                htmlRoomButtons.style.visibility = 'visible';
                 htmlStartBtn.style.display = 'none';
                 htmlCloseBtn.style.display = 'none';
                 htmlLeaveBtn.style.display = 'none';
@@ -265,12 +269,17 @@ window.addEventListener("DOMContentLoaded", function () {
                     htmlStartBtn.addEventListener('click', function () {
                         ioSocket.emit('startGame');
                     });
+                    htmlCloseBtn.style.display = 'inline';
+                    htmlCloseBtn.addEventListener('click', function () {
+                        ioSocket.emit('closeRoom');
+                    });
+                } else {
+                    console.log('ioSocket.id =/= room.socketId');
+                    htmlLeaveBtn.style.display = 'inline';
+                    htmlLeaveBtn.addEventListener('click', function () {
+                        ioSocket.emit('leaveRoom');
+                    });
                 }
-                console.log('ioSocket.id =/= room.socketId');
-                htmlLeaveBtn.style.display = 'inline';
-                htmlLeaveBtn.addEventListener('click', function () {
-                    ioSocket.emit('leaveRoom');
-                });
 
             }
 
@@ -338,11 +347,15 @@ window.addEventListener("DOMContentLoaded", function () {
             htmlRoomMsg.innerHTML = message;
         });
 
-        // Afficher le message du serveur dans la salle
-        ioSocket.on('wordFound', function (message, roomPlayers) {
-            document.getElementById('answerMsg').innerHTML = message;
-            updateRoomPlayers(roomPlayers)
+        // Afficher la réponse d'un joueur 
+        ioSocket.on('showPlayerAnswer', function (message) {
+            document.getElementById('msgAnswer').innerHTML = message;
         });
+        // // Afficher le message du serveur et mise à jour de la salle
+        // ioSocket.on('wordFound', function (message, roomPlayers) {
+        //     document.getElementById('msgAnswer').innerHTML = message;
+        //     updateRoomPlayers(roomPlayers);
+        // });
 
         // Afficher le classement de la salle
         ioSocket.on('ranking', function (roomPlayers) {

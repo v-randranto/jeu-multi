@@ -27,7 +27,8 @@ const PORT = process.env.PORT || 3000;
  */
 const options = {
   store: new MongoStore({
-    url: 'mongodb+srv://jeumulti:ifocop@cluster0-lfexs.mongodb.net/jeu-back',
+    //url: 'mongodb+srv://jeumulti:ifocop@cluster0-lfexs.mongodb.net/jeu-back',
+    url: 'mongodb://localhost:27017/jeu-back',
     ttl: 60 * 60, // expiration après une heure
     collection: 'sessions'
   }),
@@ -170,7 +171,7 @@ app.use(function (req, res, next) {
 
 
 const HTTPServer = app.listen(PORT, function () {
-  console.log("Express HTTP Server listening on 8080");
+  console.log("Express HTTP Server listening " + PORT);
 });
 
 /*******************************************************
@@ -195,6 +196,14 @@ const messages = {
   maxPlayersReached: 'Nombre de joueurs maximum atteint, vous pouvez démarrer la partie.',
   notEnoughPlayers: 'Il faut au moins 2 joueurs pour commencer à jouer.',
   gameStarts: '<b>La partie commence...</b>',
+}
+
+const reinitialisePlayers = function(players){
+  for (var i = 0; players[i]; i++) {
+    const player = players[i];
+    delete (player.roomName);
+    player.score = 0;
+  }
 }
 
 // une salle inactive est fermée au bout 30 minutes TDOD
@@ -457,8 +466,9 @@ ioServer.on("connect", function (ioSocket) {
       ioSocket.player.score++;
       gameFct.manageRoom.updateScore(room.players, ioSocket.id);
       // Envoyer à tous les joueurs de la salle la bonne réponse trouvée et la mise à jour du score du joueur gagnant      
-      const message = `${ioSocket.player.pseudo} a trouvé : <b>${room.quizWord.toUpperCase()}</b>`;
-      ioServer.in(room.name).emit('wordFound', message, room.players);
+      const message = `${ioSocket.player.pseudo} dit <b>${answer.toUpperCase()}</b>: bonne réponse`;
+      ioServer.in(room.name).emit('showPlayerAnswer', message);
+      ioServer.in(room.name).emit('updateRoomPlayers', room.players);
 
       // fin de partie       
       if (room.nbRoundsPlayed === nbMaxRounds) {
@@ -480,30 +490,33 @@ ioServer.on("connect", function (ioSocket) {
             pseudo: room.players[i].pseudo,
             score: room.players[i].score
           }
-          game.players.push(player);
+          game.players.push(player);  
         }
-
         gameFct.dbGames.insertGame(game);  // asynchrone TODO à compléter
-        // salle retirée de la liste des salles en cours        
-        const indexofRoom = gameFct.getIndexof.room(roomsList, room.name);
-        roomsList.splice(indexofRoom, 1);
-        ioServer.in(room.name).emit('updateLists', lists);
-        // Fin du jeu
-        const ioSave = ioServer;
-        const roomName = room.name
+
+        // Fermeture de la salle
+        //const ioSave = ioServer;
+        const saveRoom = room;
         setTimeout(function () {
           console.log('setTimeout endgame');
-          ioSave.in(roomName).emit('endGame');
+          ioServer.in(saveRoom.name).emit('resetRoom');
+          // libérer les joueurs et reinit score
+          reinitialisePlayers(saveRoom.players);          
+          // salle retirée de la liste des salles en cours        
+          const indexofRoom = gameFct.getIndexof.room(roomsList, room.name);
+          roomsList.splice(indexofRoom, 1);
+          // envoi listes mises à jour
+          ioServer.emit('updateLists', lists);
         }, 3000);
 
       } else {
         // Nouvelle définition à envoyer aux joueurs de la salle
         console.log('room.selectedWords', room.selectedWords);
-        const ioSave = ioServer;
+        //const ioSave = ioServer;
         const roomSave = room;
         setTimeout(function () {
           console.log('setTimeout endgame');
-          ioSave.in(roomSave.name).emit('quiz', gameFct.manageRoom.sendWordDefinition(roomSave))
+          ioServer.in(roomSave.name).emit('quiz', gameFct.manageRoom.sendWordDefinition(roomSave))
         }, 3000);
       }
 
@@ -514,7 +527,7 @@ ioServer.on("connect", function (ioSocket) {
       *-------------------------------------------*/
       // Envoyer aux joueurs de la salle la réponse fournie
       const message = `${ioSocket.player.pseudo} dit <b>${answer.toUpperCase()}</b>: mauvaise réponse`;
-      ioServer.in(room.name).emit('msgRoom', message);
+      ioServer.in(room.name).emit('showPlayerAnswer', message);
     }
 
   });
@@ -526,27 +539,53 @@ ioServer.on("connect", function (ioSocket) {
   ioSocket.on('leaveRoom', function () {
     console.log('leaveRoom player : ', ioSocket.player)
     let room = gameFct.manageRoom.getRoom(roomsList, ioSocket.player.roomName);
+    if (!room){
+      console.log("pb room inexistante");
+    }
     room.lastActivityDate = Date.now();
     // libérer le joueur
     delete (ioSocket.player.roomName);
-    if (room.gameOver) {
-      if (room.players.legnth === 1) {
-        ioServer.emit('updateConnections', connections);
-      }
+    ioSocket.player.score = 0;
+    // retirer le joueur de la salle
+    const indexofPlayer = gameFct.getIndexof.player(room.players, ioSocket.player.pseudo);
+    room.players.splice(indexofPlayer, 1);
 
-    } else {
-      // retirer le joueur de la salle
-      const indexofPlayer = gameFct.getIndexof.player(room.players, ioSocket.player.pseudo);
-      room.players.splice(indexofPlayer, 1);
+    // envoyer demandes de réaffichage au client    
+    const message = `${ioSocket.player.pseudo} quitte la salle`;
+    ioServer.in(room.name).emit('playerLeaveRoom', room.players, message);
+    ioServer.emit('updateConnections', connections);
 
-      // envoyer demandes de réaffichage au client    
-      const message = `${ioSocket.player.pseudo} quitte la salle`;
-      ioServer.in(room.name).emit('playerLeaveRoom', room.players, message);
-      ioServer.emit('updateConnections', connections);
-    }
-
+    // envoyer demande de ne plus afficher la salle pour le joueur
     ioSocket.leave(room.name);
     ioSocket.emit('resetRoom');
+
+  });
+
+
+  /*==========================================================================*
+   *     ...il veut fermer la salle
+   *==========================================================================*/
+
+  ioSocket.on('closeRoom', function () {
+    console.log('closeRoom player : ', ioSocket.player);
+    let room = gameFct.manageRoom.getRoom(roomsList, ioSocket.player.roomName);
+    room.lastActivityDate = Date.now();
+    // envoyer demandes de réaffichage au client    
+    const message = `${ioSocket.player.pseudo} ferme la salle`;
+    ioServer.in(room.name).emit('playerCloseRoom', message);
+    // libérer les joueurs et reinit score
+    reinitialisePlayers(room.players);   
+    // salle retirée de la liste des salles en cours        
+    const indexofRoom = gameFct.getIndexof.room(roomsList, room.name);
+    roomsList.splice(indexofRoom, 1);
+    ioServer.in(room.name).emit('updateLists', lists);
+    // Fermeture de la salle
+    //const ioSave = ioServer;
+    const saveRoomName = room.name
+    setTimeout(function () {
+      console.log('setTimeout endgame');
+      ioServer.in(saveRoomName).emit('closeRoom');
+    }, 2000);
 
   });
 

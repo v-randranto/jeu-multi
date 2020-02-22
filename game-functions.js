@@ -6,27 +6,33 @@ const tool = require('./tools');
 const getIndexof = {
 
     player: function (roomPlayers, pseudo) {
-        console.log('> getIndexofPlayers', roomPlayers, pseudo)
-        const findPlayer = function (player) {
-            player.pseudo === pseudo;
+        console.log('> getIndexofPlayers', roomPlayers, pseudo);        
+        for (let i=0; roomPlayers[i]; i++){
+            if (roomPlayers[i].pseudo === pseudo) {
+                return i;
+            }
         }
-        return roomPlayers.findIndex(findPlayer);
+        return -1;
     },
 
     connection: function (connections, connectId) {
         console.log('> getIndexofConnection', connections, connectId)
-        const findConnection = function (connection) {
-            connection.connectId === connectId;
+        for (let i=0; connections[i]; i++){
+            if (connections[i].connectId === connectId) {
+                return i;
+            }
         }
-        return connections.findIndex(findConnection);
+        return -1;
     },
 
     room: function (roomsList, roomName) {
         console.log('> getIndexofRoom', roomsList, roomName)
-        const findRoom = function (room) {
-            room.name === roomName;
+        for (let i=0; roomsList[i]; i++){
+            if (roomsList[i].name === roomName) {
+                return i;
+            }
         }
-        return roomsList.findIndex(findRoom);
+        return -1;
     }
 };
 
@@ -73,6 +79,7 @@ const manageRoom = {
 
         // fonction récursive qui trouve le joueur d'une liste avec le meilleur score 
         const getBestPlayer = function (players) {
+            console.log('players :', players)
             let bestScore = 0;
             let bestPlayer;
             for (let i = 0; players[i]; i++) {
@@ -81,11 +88,13 @@ const manageRoom = {
                     bestPlayer = players[i];
                 }
             }
+            console.log("bestPlayer:", bestPlayer.pseudo, bestPlayer.score)
             playersRanking.push(bestPlayer);
 
             playersArray.splice(getIndexof.player(players, bestPlayer.pseudo), 1);
             console.log('playersArray', playersArray);
             if (players.length > 0) {
+               console.log('players.length > 0 => lets do it again')
                 getBestPlayer(playersArray);
             }
         }
