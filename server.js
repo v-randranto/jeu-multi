@@ -27,8 +27,8 @@ const PORT = process.env.PORT || 3000;
  */
 const options = {
   store: new MongoStore({
-    //url: 'mongodb+srv://jeumulti:ifocop@cluster0-lfexs.mongodb.net/jeu-back',
-    url: 'mongodb://localhost:27017/jeu-back',
+    url: 'mongodb+srv://jeumulti:ifocop@cluster0-lfexs.mongodb.net/jeu-back',
+    //url: 'mongodb://localhost:27017/jeu-back',
     ttl: 60 * 60, // expiration après une heure
     collection: 'sessions'
   }),
