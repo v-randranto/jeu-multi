@@ -29,20 +29,21 @@ var htmlAnswserForm = document.getElementById('answerForm');
 var updateGamesList = function (gamesList) {
     console.log('>updateGamesList')
     // mise à jour de la liste des parties
-    var htmlList = document.querySelector('#gamesList ul');
-    if (!htmlList) {
-        htmlList = document.createElement('ul');
-        htmlGamesList.appendChild(htmlList);
-    }
-    htmlList.innerHTML = '';
-    //TODO afficher dans un tableau
+    var htmlTable = document.querySelector('#gamesList');
+    // if (!htmlTable) {
+    //     htmlTable = document.createElement('table');
+    //     htmlGamesList.appendChild(htmlTable);
+    // }
+    htmlTable.innerHTML = '';
+    
     for (var i = 0; gamesList[i]; i++) {
         var game = gamesList[i];
-        console.log('game ', game)
-        var htmlItem = document.createElement('li');
-        htmlItem.innerHTML = `Partie du ${game.startDate}, durée ${game.duration}`;
-        htmlList.appendChild(htmlItem);
+        console.log('game ', game);
+        var htmlRow = document.createElement('tr');
+        htmlRow.innerHTML = game;        
+        htmlTable.appendChild(htmlRow);
     }
+
 }
 
 var updateRoomsList = function (roomsList, ioSocketId) {
@@ -315,6 +316,7 @@ window.addEventListener("DOMContentLoaded", function () {
             updateRoomPlayers(roomPlayers);
 
         });
+
 
         /*---------------------------------------------------*
          *    Gestion d'une partie

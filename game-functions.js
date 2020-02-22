@@ -6,8 +6,8 @@ const tool = require('./tools');
 const getIndexof = {
 
     player: function (roomPlayers, pseudo) {
-        console.log('> getIndexofPlayers', roomPlayers, pseudo);        
-        for (let i=0; roomPlayers[i]; i++){
+        console.log('> getIndexofPlayers', roomPlayers, pseudo);
+        for (let i = 0; roomPlayers[i]; i++) {
             if (roomPlayers[i].pseudo === pseudo) {
                 return i;
             }
@@ -17,7 +17,7 @@ const getIndexof = {
 
     connection: function (connections, connectId) {
         console.log('> getIndexofConnection', connections, connectId)
-        for (let i=0; connections[i]; i++){
+        for (let i = 0; connections[i]; i++) {
             if (connections[i].connectId === connectId) {
                 return i;
             }
@@ -27,7 +27,7 @@ const getIndexof = {
 
     room: function (roomsList, roomName) {
         console.log('> getIndexofRoom', roomsList, roomName)
-        for (let i=0; roomsList[i]; i++){
+        for (let i = 0; roomsList[i]; i++) {
             if (roomsList[i].name === roomName) {
                 return i;
             }
@@ -94,7 +94,7 @@ const manageRoom = {
             playersArray.splice(getIndexof.player(players, bestPlayer.pseudo), 1);
             console.log('playersArray', playersArray);
             if (players.length > 0) {
-               console.log('players.length > 0 => lets do it again')
+                console.log('players.length > 0 => lets do it again')
                 getBestPlayer(playersArray);
             }
         }
@@ -109,7 +109,7 @@ const manageRoom = {
 const dbGames = {
 
     collectionName: 'games',
-    findGames: function () {
+    findGames: function (parameter) {
 
         const gamesList = [];
         dbQuery.find({
@@ -122,38 +122,52 @@ const dbGames = {
                     console.log("erreur recup gamesList")
                 } else {
                     if (data.length) {
-                        for (let i = 0; data[i]; i++) {
-                            let game = {};
-                            game.startDate = tool.dateSimple(data[i].startDate);
-                            game.duration = tool.duration(data[i].startDate, data[i].endDate)
-                            game.players = data[i].players;
-                            game.nbRoundsPlayed = data[i].nbRoundsPlayed;
-                            gamesList.push(game);
+                        // formattage du contenu de chaque partie pour un affichage dans une table
+                        let thGame = `<th>Date</th><th>Durée</th><th>Tours</th>`;
+                        for (let i=0; i<5; i++) {
+                            thGame += `<th>Joueur: score </th>`;
                         }
-                        
-                    } 
-                    return gamesList;
+                        gamesList.push(thGame);
+                        data.forEach(game => {
+                            let trGame = `<td>${tool.shortDate(game.startDate)}</td>`
+                                + `<td>${tool.duration(game.startDate, game.endDate)}</td>`
+                                + `<td>${game.nbRoundsPlayed}</td>`;
+
+                            game.players.forEach(player => {
+                                trGame += `<td>${player.pseudo}: ${player.score} </td>`;
+                            })
+
+                            console.log('game html :', trGame);
+                            gamesList.push(trGame);
+
+                        })
+
+                    }
+                    console.log(gamesList);
+                    parameter.done(gamesList);
                 } // fin else
 
             } // fin done
 
         }) // fin dbQuery
+
     },
 
-    insertGame: function (game) {
-        console.log('>addGamesList ', game)
+    insertGame: function (parameters) {
+        console.log('>addGamesList ', parameters.game)
         dbQuery.insert({
             collectionName: this.collectionName,
-            document: game,
-            done: (resultInsert) => {
-                if (resultInsert.ok == '1') {
+            document: parameters.game,
+            done: (err, result) => {
+                if (result.ok == '1') {
                     console.log("insertion game OK")
                 } else {
                     console.log("erreur insertion game")
                 }
-                //parameters.done(result);            
+                parameters.done(result.ok);
             }
         });
+
     }
 }
 

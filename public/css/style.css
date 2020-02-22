@@ -40,3 +40,7 @@ a {
 .clickable {
   cursor: pointer;
 }
+
+th, tr {
+  padding: 5px 10px;
+}

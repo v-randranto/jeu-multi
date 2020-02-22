@@ -38,7 +38,7 @@ exports.insert = (parameters) => {
       };
       console.log(cr.result)
       client.close();
-      parameters.done(cr.result);
+      parameters.done(err, cr.result);
     });    
 
   });
