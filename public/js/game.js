@@ -152,7 +152,7 @@ window.addEventListener("DOMContentLoaded", function () {
      * CONNEXION SOCKET.IO 
      * TODO: commentaires
      **********************************************************/
-    var ioSocket = io(`http://${hostName}:3000`, function () {
+    var ioSocket = io(`http://${hostName}:8080`, function () {
     });
 
     /*=============================================================*
