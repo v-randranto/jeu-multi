@@ -170,7 +170,7 @@ app.use(function (req, res, next) {
 });
 
 
-const HTTPServer = app.listen(8080, function () {
+const HTTPServer = app.listen(PORT, function () {
   console.log("Express HTTP Server listening " + PORT);
 });
 
