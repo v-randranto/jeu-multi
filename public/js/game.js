@@ -2,9 +2,7 @@
  *  FRONT : GESTION DU JEU - CONNEXION SOCKET.IO
  * TODO commentaires
  ****************************************************************/
-var hostName = 'localhost';
-//var hostName = '192.168.1.50';
-//var hostName = '192.168.1.11';    
+var PORT = '8080';    
 
 var htmlPlayForm = document.getElementById('playForm');
 
@@ -152,7 +150,7 @@ window.addEventListener("DOMContentLoaded", function () {
      * CONNEXION SOCKET.IO 
      * TODO: commentaires
      **********************************************************/
-    var ioSocket = io(`http://${hostName}:8080`, function () {
+    var ioSocket = io("http://localhost:"+PORT, function () {
     });
 
     /*=============================================================*
