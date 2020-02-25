@@ -5,7 +5,6 @@ const MongoClient = require('mongodb').MongoClient;
 //const urlDb = 'mongodb://localhost:27017';
 const dbName = 'jeu-back';
 const urlDb = 'mongodb+srv://jeumulti:ifocop@cluster0-lfexs.mongodb.net';
-
 const connectDb = (callback) => {
   console.log('> connectDb');
   MongoClient.connect(urlDb, { useUnifiedTopology: true }, (err, client) => {
@@ -38,7 +37,7 @@ exports.insert = (parameters) => {
       };
       console.log(cr.result)
       client.close();
-      parameters.done(err, cr.result);
+      parameters.done(cr.result.ok, err);
     });    
 
   });

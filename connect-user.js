@@ -83,17 +83,18 @@ exports.connect = function (parameters) {
         dbQuery.insert({
           collectionName: 'users',
           document: user,
-          done: (resultInsert) => {
-            if (resultInsert.ok == '1') {
+          done: (resultOK, err) => {
+            if (resultOK == '1') {
               console.log('insertion user OK');
             } else {
               console.log('erreur insertion user');
+              //todo gestion erreur fatale
             }
             parameters.done(result);
           }
+          
         });
-
-        return
+        return;
       }
 
       console.log('> register : identifiants KO');

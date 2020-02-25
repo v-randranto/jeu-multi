@@ -28,10 +28,6 @@ var updateGamesList = function (gamesList) {
     console.log('>updateGamesList')
     // mise à jour de la liste des parties
     var htmlTable = document.querySelector('#gamesList');
-    // if (!htmlTable) {
-    //     htmlTable = document.createElement('table');
-    //     htmlGamesList.appendChild(htmlTable);
-    // }
     htmlTable.innerHTML = '';
     
     for (var i = 0; gamesList[i]; i++) {

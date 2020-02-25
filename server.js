@@ -21,7 +21,7 @@ const app = express();
 /* Template engine */
 app.set('view engine', 'pug');
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 /**
  *  Middlewares 
  */
@@ -67,7 +67,6 @@ app.use(function (req, res, next) {
 
 app.all('/', function (req, res, next) {
   console.log('>app.all ', req.url);
-
   res.render('login', interpolations);
 });
 
@@ -78,7 +77,10 @@ app.all('/', function (req, res, next) {
 
 app.get('/login', function (req, res, next) {
   console.log('>app.get login ', req.originalUrl);
-  // contrôler la session  
+  if (req.session.pseudo) {
+    res.render('game', interpolations);
+    return;
+  } 
   res.render('login', interpolations);
 });
 
@@ -111,10 +113,12 @@ app.post('/login', function (req, res) {
 
 app.get('/register', function (req, res, next) {
   console.log('>app.get register ', req.originalUrl);
-  // contrôler la session
+  if (req.session.pseudo) {
+    res.render('game', interpolations);
+    return;
+  } 
   res.render('register', interpolations);
 });
-
 
 app.post('/register', function (req, res) {
   console.log('> /register');
@@ -169,7 +173,6 @@ app.use(function (req, res, next) {
   res.render('error', interpolations);
 });
 
-
 const HTTPServer = app.listen(PORT, function () {
   console.log("Express HTTP Server listening " + PORT);
 });
@@ -187,15 +190,17 @@ const connections = [];
 let gamesList = [];
 
 const nbMaxPlayers = 5;
+const nbMinPlayers = 2;
 const nbMaxRounds = 4;
+
 
 const messages = {
   sessionNotFound: 'Session non trouvée.',
   alreadyInRoom: 'Vous êtes déjà dans une salle.',
   roomNotFound: 'Salle non trouvée.',
-  maxPlayersReached: 'Nombre de joueurs maximum atteint, vous pouvez démarrer la partie.',
-  notEnoughPlayers: 'Il faut au moins 2 joueurs pour commencer à jouer.',
-  gameStarts: '<b>La partie commence...</b>',
+  maxPlayersReached: `Nombre de ${nbMaxPlayers} joueurs maximum atteint, vous pouvez démarrer la partie.`,
+  notEnoughPlayers: `Il faut au moins ${nbMinPlayers} joueurs pour commencer à jouer.`,
+  gameStarts: `<b>La partie commence...</b>`,
 }
 
 const reinitialisePlayers = function (players) {
@@ -428,7 +433,7 @@ ioServer.on("connect", function (ioSocket) {
       return;
     }
 
-    if (room.players.length < 2) {
+    if (room.players.length < nbMinPlayers) {
       ioSocket.emit('msgRoom', messages.notEnoughPlayers);
       return;
     }
@@ -516,8 +521,6 @@ ioServer.on("connect", function (ioSocket) {
             }
           });
 
-
-
         // Fermeture de la salle
         //const ioSave = ioServer;
         const saveRoom = room;
@@ -527,7 +530,7 @@ ioServer.on("connect", function (ioSocket) {
           // libérer les joueurs et reinit score
           reinitialisePlayers(saveRoom.players);
           // salle retirée de la liste des salles en cours        
-          const indexofRoom = gameFct.getIndexof.room(roomsList, room.name);
+          const indexofRoom = gameFct.getIndexof.room(roomsList, saveRoom.name);
           roomsList.splice(indexofRoom, 1);
           // envoi listes mises à jour
           ioServer.emit('updateLists', lists);
@@ -599,7 +602,7 @@ ioServer.on("connect", function (ioSocket) {
     }
     // envoyer demandes de réaffichage au client    
     const message = `${ioSocket.player.pseudo} ferme la salle`;
-    ioServer.in(room.name).emit('playerCloseRoom', message);
+    ioServer.in(room.name).emit('msgRoom', message);
 
     // Fermeture de la salle
     //const ioSave = ioServer;
@@ -610,7 +613,7 @@ ioServer.on("connect", function (ioSocket) {
       // libérer les joueurs et reinit score
       reinitialisePlayers(saveRoom.players);
       // salle retirée de la liste des salles en cours        
-      const indexofRoom = gameFct.getIndexof.room(roomsList, room.name);
+      const indexofRoom = gameFct.getIndexof.room(roomsList, saveRoom.name);
       roomsList.splice(indexofRoom, 1);
       // envoi listes mises à jour
       ioServer.emit('updateLists', lists);
