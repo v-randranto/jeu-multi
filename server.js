@@ -198,11 +198,11 @@ const gameConfig = {
 
 const messages = {
   alreadyInRoom: 'Vous êtes déjà dans une salle.',
-  closedRoom: ` a fermé sa salle.`,
+  closingRoom: ` ferme sa salle.`,
   connect: ` s'est connecté.e.`,
   disconnect: ` s'est déconnecté.e.`,
   gameStarts: `<b>La partie commence...</b>`,
-  interruptedGame: `Partie abandonnée, fermeture de la salle de `,
+  interruptedGame: `Partie abandonnée dans la salle de `,
   joinedRoom: ` a rejoint la salle de `,
   leftRoom: ` a quitté la salle de `,
   openRoom: ` a ouvert une salle.`,
@@ -222,7 +222,9 @@ const reinitialisePlayers = function (players) {
 }
 
 const closeRoom = (room, lists, message) => {
-  ioServer.in(room.name).emit('resetRoom');
+  ioServer.emit('tracking', message);
+  setTimeout(() => {
+    ioServer.in(room.name).emit('resetRoom');
   // libérer les joueurs et reinit score
   reinitialisePlayers(room.players);
   // salle retirée de la liste des salles en cours        
@@ -230,6 +232,8 @@ const closeRoom = (room, lists, message) => {
   roomsList.splice(indexofRoom, 1);
   // envoi listes mises à jour
   ioServer.emit('updateLists', lists, message);
+  }, 2000);
+  
 }
 
 const asyncRoomCall = async function (roomsList, roomName) {
@@ -253,21 +257,22 @@ ioServer.on("connect", function (ioSocket) {
     connections: connections
   }
 
+  gameFct.dbGames.findGames(
+    {
+      done: (data) => {
+        console.log('gameFct.dbGames.findGames DONE', data)
+        gamesList = data;
+        ioServer.emit('updateLists', lists);
+      }
+    }
+  );
+
   /*========================================================================*
   *         ...il veut jouer
   *========================================================================*/
 
   ioSocket.on("addPlayer", function (sessionOtherId) {
-
-    gameFct.dbGames.findGames(
-      {
-        done: (data) => {
-          console.log('gameFct.dbGames.findGames DONE', data)
-          gamesList = data;
-          ioServer.emit('updateLists', lists);
-        }
-      }
-    );
+    
     // Chercher en base la session avec l'id fourni par le client
     dbQuery.find({
       collectionName: 'sessions',
@@ -295,8 +300,8 @@ ioServer.on("connect", function (ioSocket) {
             };
             connections.push(connection);
             // Envoyer la liste des joueurs connectés pour mise à jour 
-            const message = ioSocket.player.pseudo + messages.connect;            
-            ioServer.emit('updateLists', lists);
+            const message = ioSocket.player.pseudo + messages.connect;
+            ioServer.emit('updateConnections', connections, message);
           } else {
             console.log('session non trouvée');
             // Envoyer au client l'info que la session n'existe pas
@@ -344,6 +349,7 @@ ioServer.on("connect", function (ioSocket) {
     ioServer.in(room.name).emit('displayRoom', room, true);
 
     // Envoyer à tous les joueurs les listes pour réaffichage
+    // (indisponibilité d'un joueur et d'une salle)
     const message = ioSocket.player.pseudo + `${messages.openRoom}.`;
     ioServer.emit('updateLists', lists, message);
 
@@ -484,12 +490,8 @@ ioServer.on("connect", function (ioSocket) {
         // classement des joueurs
         room.players = gameFct.manageRoom.rankPlayers(room.players);
         room.gameOver = true;
-        // console.log('classement :', room.players)
-        // ioServer.in(room.name).emit('ranking', room.players);
-
+        
         const message = room.players[0].pseudo + messages.winner + `${ioSocket.player.pseudo}.`
-        // Fermeture de la salle        
-        closeRoom(room, lists, message);
 
         // Enregistrer en base la partie
         let game = {
@@ -516,6 +518,9 @@ ioServer.on("connect", function (ioSocket) {
                       console.log('gameFct.dbGames.findGames DONE', data)
                       gamesList = data;
                       ioServer.emit('updateLists', lists);
+                      // Fermeture de la salle
+                        closeRoom(room, lists, message);                        
+                      
                     }
                   }
                 );
@@ -590,7 +595,7 @@ ioServer.on("connect", function (ioSocket) {
 
     getRoomAsync(roomsList, ioSocket.player.roomName).then((room) => {
 
-      const message = ioSocket.player.pseudo + messages.closedRoom;
+      const message = ioSocket.player.pseudo + messages.closingRoom;
       // Fermeture de la salle
       closeRoom(room, lists, message);
 
