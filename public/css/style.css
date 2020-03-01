@@ -33,7 +33,7 @@ a {
   left: 0;
 }
 
-#register, #gamesOverview, #gameRoom,#sessionOtherId, #room, #quiz {
+#register, #gamesOverview, #tracking, #gameRoom, #sessionOtherId, #room, #quiz {
   visibility: hidden;
 }
 

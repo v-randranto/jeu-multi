@@ -6,7 +6,6 @@ const tool = require('./tools');
 const getIndexof = {
 
     player: function (roomPlayers, pseudo) {
-        console.log('> getIndexofPlayers', roomPlayers, pseudo);
         for (let i = 0; roomPlayers[i]; i++) {
             if (roomPlayers[i].pseudo === pseudo) {
                 return i;
@@ -16,7 +15,6 @@ const getIndexof = {
     },
 
     connection: function (connections, connectId) {
-        console.log('> getIndexofConnection', connections, connectId)
         for (let i = 0; connections[i]; i++) {
             if (connections[i].connectId === connectId) {
                 return i;
@@ -26,12 +24,13 @@ const getIndexof = {
     },
 
     room: function (roomsList, roomName) {
-        console.log('> getIndexofRoom', roomsList, roomName)
         for (let i = 0; roomsList[i]; i++) {
             if (roomsList[i].name === roomName) {
+                console.log('trouvé :)');
                 return i;
             }
         }
+        console.log('pas trouvé :(');
         return -1;
     }
 };
@@ -52,7 +51,6 @@ const manageRoom = {
         room.nbRoundsPlayed++;
         room.quizWord = room.selectedWords[room.nbRoundsPlayed - 1].word;
         room.quizDefinition = room.selectedWords[room.nbRoundsPlayed - 1].definition;
-        console.log('> sendWordDefinition', room.quizWord, room.quizDefinition);
         // Envoyer la question à tous les joueurs de la salle
         const quizMsg = {
             word: `Tour n° ${room.nbRoundsPlayed} - Mot de ${room.quizWord.length} lettres.`,
@@ -72,7 +70,6 @@ const manageRoom = {
     },
 
     rankPlayers: function (playersToRank) {
-        console.log('> rankPlayers')
 
         const playersArray = playersToRank;
         const playersRanking = [];
@@ -88,19 +85,15 @@ const manageRoom = {
                     bestPlayer = players[i];
                 }
             }
-            console.log("bestPlayer:", bestPlayer.pseudo, bestPlayer.score)
             playersRanking.push(bestPlayer);
 
             playersArray.splice(getIndexof.player(players, bestPlayer.pseudo), 1);
-            console.log('playersArray', playersArray);
             if (players.length > 0) {
-                console.log('players.length > 0 => lets do it again')
                 getBestPlayer(playersArray);
             }
         }
 
         getBestPlayer(playersArray);
-        console.log('playersRanking', playersRanking)
         return playersRanking;
     }
 
@@ -136,14 +129,11 @@ const dbGames = {
                             game.players.forEach(player => {
                                 trGame += `<td>${player.pseudo}: ${player.score} </td>`;
                             })
-
-                            console.log('game html :', trGame);
                             gamesList.push(trGame);
 
                         })
 
                     }
-                    console.log(gamesList);
                     parameter.done(gamesList);
                 } // fin else
 
@@ -154,23 +144,21 @@ const dbGames = {
     },
 
     insertGame: function (parameters) {
-        console.log('>addGamesList ', parameters.game)
         dbQuery.insert({
             collectionName: this.collectionName,
             document: parameters.game,
-            done: (err, result) => {
-                if (result.ok == '1') {
+            done: (resultOK, err) => {
+                if (resultOK == '1') {
                     console.log("insertion game OK")
                 } else {
                     console.log("erreur insertion game")
                 }
-                parameters.done(result.ok);
+                parameters.done(resultOK);
             }
         });
 
     }
 }
-
 
 exports.dbGames = dbGames;
 exports.manageRoom = manageRoom;

@@ -2,7 +2,7 @@
  *  FRONT : GESTION DU JEU - CONNEXION SOCKET.IO
  * TODO commentaires
  ****************************************************************/
-var PORT = '8080';    
+var PORT = '8080';
 
 var htmlPlayForm = document.getElementById('playForm');
 
@@ -19,28 +19,36 @@ var htmlRoomButtons = document.getElementById('roomButtons');
 var htmlRoomMsg = document.getElementById('msgRoom');
 var htmlQuiz = document.getElementById('quiz');
 var htmlAnswserForm = document.getElementById('answerForm');
+var htmlTracking = document.querySelector('#tracking ul');
+
 
 /*********************************************
  * FONCTIONS DE MISE A JOUR DES LISTES
  **********************************************/
+var updateTracking = function (message) {
+    var htmlItem = document.createElement('li');
+    htmlItem.innerHTML = message;
+    htmlTracking.appendChild(htmlItem);
+
+}
 
 var updateGamesList = function (gamesList) {
     console.log('>updateGamesList')
     // mise à jour de la liste des parties
     var htmlTable = document.querySelector('#gamesList');
     htmlTable.innerHTML = '';
-    
+
     for (var i = 0; gamesList[i]; i++) {
         var game = gamesList[i];
         console.log('game ', game);
         var htmlRow = document.createElement('tr');
-        htmlRow.innerHTML = game;        
+        htmlRow.innerHTML = game;
         htmlTable.appendChild(htmlRow);
     }
 
 }
 
-var updateRoomsList = function (roomsList, ioSocketId) {
+var updateRoomsList = function (roomsList, ioSocketId, message) {
     console.log('> updateRoomsList')
     // mise à jour de la liste des salles
     var htmlList = document.querySelector('#roomsList ul');
@@ -64,11 +72,14 @@ var updateRoomsList = function (roomsList, ioSocketId) {
         }
         htmlList.appendChild(htmlItem);
     }
+    if (message) {
+        updateTracking(message);
+    }
 
 }
 
-var updateConnections = function (connections) {
-    console.log('> updateConnections')
+var updateConnections = function (connections, message) {
+    console.log('> updateConnections', message)
     // mise à jour de la liste des joueurs connectés
     var htmlList = document.querySelector('#connections ul');
     if (!htmlList) {
@@ -82,6 +93,9 @@ var updateConnections = function (connections) {
         var status = player.roomName ? `dans la salle ${player.roomName}` : `libre`;
         htmlItem.innerHTML = `<b>${player.pseudo}</b> ${status}`;
         htmlList.appendChild(htmlItem);
+    }
+    if (message) {
+        updateTracking(message);
     }
 }
 
@@ -106,37 +120,14 @@ var updateRoomPlayers = function (roomPlayers) {
     }
 }
 
-var displayRanking = function (roomPlayers) {
-    console.log('> displayRanking')
-    // 
-    htmlInitGameBtn.disabled = false;
-    // les joueurs et le quiz ne sont plus affichés
-    document.getElementById('quiz').innerHTML = '';
-    htmlRoomPlayers.innerHTML = '';
-    htmlRoomButtons.style.visibility = 'hidden';
-    htmlRoomMsg.innerHTML = '';
-    // affichage du classement fourni par le serveur
-    var htmlTitreH3 = document.createElement('h3');
-    htmlTitreH3.innerHTML = 'Classement';
-    var htmlList = document.createElement('ul');
-    for (var i = 0; roomPlayers[i]; i++) {
-        var player = roomPlayers[i];
-        var htmlItem = document.createElement('li');
-        htmlItem.innerHTML = `<b>${player.pseudo}</b> ${player.score} points`;
-        htmlList.appendChild(htmlItem);
-    }
-    htmlRoomPlayers.appendChild(htmlTitreH3);
-    htmlRoomPlayers.appendChild(htmlList);
-}
-
 var resetRoom = function () {
     htmlRoomPlayers.innerHTML = '';
     htmlRoomMsg.innerHTML = '';
-    htmlQuiz.innerHTML = '';
+    htmlQuiz.style.visibility = 'hidden';
+    document.getElementById('word').innerHTML = '';
+    document.getElementById('definition').innerHTML = '';
+    document.getElementById('msgAnswer').innerHTML = '';
     htmlRoomButtons.style.visibility = 'hidden';
-    // document.getElementById('startGameBtn').style.display = 'none';
-    // document.getElementById('closeRoomBtn').style.display = 'none';
-    // document.getElementById('leaveRoomBtn').style.display = 'none';
 }
 
 window.addEventListener("DOMContentLoaded", function () {
@@ -146,7 +137,7 @@ window.addEventListener("DOMContentLoaded", function () {
      * CONNEXION SOCKET.IO 
      * TODO: commentaires
      **********************************************************/
-    var ioSocket = io("http://localhost:"+PORT, function () {
+    var ioSocket = io("http://localhost:" + PORT, function () {
     });
 
     /*=============================================================*
@@ -167,14 +158,15 @@ window.addEventListener("DOMContentLoaded", function () {
 
             document.getElementById('playForm').style.display = "none";
             htmlGamesOverview.style.visibility = "visible";
+            htmlTracking.style.visibility = "visible";
         })
 
         /*--------------------------------------------------*
         *    Affichage des listes envoyées par le serveur
         *---------------------------------------------------*/
 
-        ioSocket.on("updateLists", function (lists) {
-
+        ioSocket.on('updateLists', function (lists, message) {
+            console.log('>updateLists', message);
             // liste des parties 
             htmlGamesList.innerHTML = '';
             htmlRoomsList.innerHTML = '';
@@ -202,9 +194,13 @@ window.addEventListener("DOMContentLoaded", function () {
             }
 
             // Liste des joueurs connectés                
-            console.log('> connections ', lists.connections);
+            console.log('> connections ', lists.connections, message);
             if (lists.connections.length) {
                 updateConnections(lists.connections);
+            }
+
+            if (message) {
+                updateTracking(message);
             }
 
         });
@@ -214,9 +210,9 @@ window.addEventListener("DOMContentLoaded", function () {
         *---------------------------------------------------*/
 
         // màj liste des connections envoyée par le serveur
-        ioSocket.on("updateConnections", function (connections) {
+        ioSocket.on("updateConnections", function (connections, message) {
             // à ajouter à la liste des joueurs connectés
-            updateConnections(connections);
+            updateConnections(connections, message);
         });
 
         // session expirée - à gérer
@@ -242,7 +238,7 @@ window.addEventListener("DOMContentLoaded", function () {
         });
 
         // Afficher la salle créée/rejointe par le joueur
-        ioSocket.on("displayRoom", function (room, create) {
+        ioSocket.on("displayRoom", function (room, create, message) {
             // si ouverture d'une salle
             console.log('htmlRoom.style.visibility ', htmlRoom.style.visibility)
             if (create || ioSocket.id !== room.socketId) {
@@ -277,7 +273,9 @@ window.addEventListener("DOMContentLoaded", function () {
                 }
 
             }
-
+            if (message) {
+                htmlRoomMsg.innerHTML = message;
+            }
             updateRoomPlayers(room.players);
         });
 
@@ -311,7 +309,6 @@ window.addEventListener("DOMContentLoaded", function () {
 
         });
 
-
         /*---------------------------------------------------*
          *    Gestion d'une partie
          *---------------------------------------------------*/
@@ -324,6 +321,7 @@ window.addEventListener("DOMContentLoaded", function () {
 
         // Afficher la question envoyée par le seveur
         ioSocket.on('quiz', function (quizMsg) {
+            htmlRoomMsg.innerHTML = '';
             // affichage de la définition du mot 
             htmlQuiz.style.visibility = 'visible';
             console.log('> quiz ', quizMsg);
@@ -347,11 +345,6 @@ window.addEventListener("DOMContentLoaded", function () {
         ioSocket.on('showPlayerAnswer', function (message) {
             document.getElementById('msgAnswer').innerHTML = message;
         });
-        // // Afficher le message du serveur et mise à jour de la salle
-        // ioSocket.on('wordFound', function (message, roomPlayers) {
-        //     document.getElementById('msgAnswer').innerHTML = message;
-        //     updateRoomPlayers(roomPlayers);
-        // });
 
         // Afficher le classement de la salle
         ioSocket.on('ranking', function (roomPlayers) {

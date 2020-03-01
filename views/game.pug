@@ -26,13 +26,16 @@ html(lang="en")
             button(id="initGameBtn") Initier une partie 
             p(id="msgGames")
 
+        #tracking
+            ul
+
         #room 
             #roomPlayers 
+            p(id="msgRoom") 
             #roomButtons          
                 button(id="startGameBtn") Démarrer la partie
                 button(id="closeRoomBtn") Fermer la salle
-                button(id="leaveRoomBtn") Quitter la salle  
-            p(id="msgRoom")        
+                button(id="leaveRoomBtn") Quitter la salle                     
             #quiz
                 p(id="word")
                 p(id="definition") 
