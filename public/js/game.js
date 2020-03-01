@@ -2,8 +2,6 @@
  *  FRONT : GESTION DU JEU - CONNEXION SOCKET.IO
  * TODO commentaires
  ****************************************************************/
-var hostname = '15.236.48.6:8080';
-
 var htmlPlayForm = document.getElementById('playForm');
 
 var htmlGamesOverview = document.getElementById('gamesOverview');
