@@ -170,15 +170,15 @@ window.addEventListener("DOMContentLoaded", function () {
             htmlRoomsList.innerHTML = '';
             htmlConnections.innerHTML = '';
 
-            console.log('> gamesList ', lists.gamesList);
-            if (lists.gamesList.length) {
-                updateGamesList(lists.gamesList);
+            console.log('> gamesList ', lists.games);
+            if (lists.games.length) {
+                updateGamesList(lists.games);
             }
 
             // Liste des salles ouvertes 
             console.log('> roomsList ', roomsList);
-            if (lists.roomsList.length) {
-                updateRoomsList(lists.roomsList);
+            if (lists.rooms.length) {
+                updateRoomsList(lists.rooms);
                 // ajout d'un écouteur d'évént à chaque tag 'li' de classe 'clickable'
                 var htmlClickableRooms = document.querySelectorAll('.clickable')
                 for (var i = 0; htmlClickableRooms[i]; i++) {

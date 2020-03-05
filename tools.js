@@ -1,30 +1,3 @@
-const elements = {
-  month: ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'],
-  days: ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'],
-  addZero: (element) => {
-    if (element < 10) {
-      element = '0' + element;
-    }
-    return element;
-  }
-}
-
-// Fonction pour retourner une date lisible. Elle accepte un timestamp en entrée et retourne une de caractères
-exports.dateComplete = (aDate) => {
-  aDate = new Date(aDate);
-  return `${elements.days[aDate.getDay()]} ${aDate.getDate()} ${elements.month[aDate.getMonth()]} à ${elements.addZero(aDate.getHours())}:${elements.addZero(aDate.getMinutes())}`;
-}
-
-exports.dateSimple = (uneDate) => {
-  uneDate = new Date(uneDate);
-  return `${elements.days[uneDate.getDay()]} ${uneDate.getDate()} ${elements.month[uneDate.getMonth()]}`;
-}
-
-exports.shortDate = (date) => {
-  date = new Date(date);
-  return `${elements.days[date.getDay()]} ${date.getDate()} ${elements.month[date.getMonth()]}`;
-}
-
 exports.shortDate = (date) => {
   date = new Date(date);
   let day = date.getDate();

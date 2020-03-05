@@ -10,40 +10,57 @@ const express = require("express");
 const expressSession = require("express-session");
 const MongoStore = require("connect-mongo")(expressSession);
 const bodyParser = require('body-parser');
-
-const connectUser = require('./connect-user');
-const gameFct = require('./game-functions');
-const dbQuery = require('./db-manager');
-const titres = require('./titres');
+const cors = require('cors');
+const mongoose = require('mongoose');
+const User = require('./schemas/user');
+const Game = require('./schemas/game');
+const Session = require('./schemas/session');
+const Dictionnary = require('./schemas/dictionnary');
 const tool = require('./tools');
 
+const connectUser = require('./connect-user');
+const roomFct = require('./room-functions');
+const dbQuery = require('./db-manager');
+const titres = require('./titres');
+
 const app = express();
+// autoriser les requêtes CORS
+app.use(cors());
 /* Template engine */
 app.set('view engine', 'pug');
 
 const PORT = process.env.PORT || 8080;
+const dbUrl = `mongodb+srv://jeumulti:ifocop@cluster0-lfexs.mongodb.net/jeu-back`;
 /**
  *  Middlewares 
  */
+
+mongoose.connect(dbUrl, { useUnifiedTopology: true })
+  .then(() => {
+    console.log('Connected to MongoDB Atlas...');
+  })
+  .catch((error) => {
+    console.log('Unable to connect to MongoDB Atlas!');
+    console.error(error);
+  });
+
 const options = {
   store: new MongoStore({
-    url: 'mongodb+srv://jeumulti:ifocop@cluster0-lfexs.mongodb.net/jeu-back',
-    //url: 'mongodb://localhost:27017/jeu-back',
+    url: dbUrl,
     ttl: 60 * 60, // expiration après une heure
     collection: 'sessions'
   }),
-  //name: 'sid',
   secret: "jeu multi-joueurs",
   saveUninitialized: true,
   resave: false
 };
 
-app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content, Accept, Content-Type, Authorization');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-  next();
-});
+// app.use((req, res, next) => {
+//   res.setHeader('Access-Control-Allow-Origin', '*');
+//   res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content, Accept, Content-Type, Authorization');
+//   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+//   next();
+// });
 
 app.use(expressSession(options));
 
@@ -192,9 +209,20 @@ const HTTPServer = app.listen(PORT, function () {
 
 const ioServer = require("socket.io")(HTTPServer);
 
-const roomsList = [];
-const connections = [];
-let gamesList = [];
+// const lists.rooms = [];
+// const connections = [];
+// const gamesList = [];
+// const lists = {
+//   gamesList: gamesList,
+//   lists.rooms: lists.rooms,
+//   connections: connections
+// }
+
+const lists = {
+  games: [],
+  rooms: [],
+  connections: []
+}
 
 const gameConfig = {
   nbMaxPlayers: 4,
@@ -205,10 +233,13 @@ const gameConfig = {
 
 const messages = {
   alreadyInRoom: 'Vous êtes déjà dans une salle.',
+  bugDisconnect: '<b>Oups, la machine ne veut pas vous laisser partir!</b>',
+  bugGames: '<b>Oups, la liste des parties est indisponible!</b>',
+  bugRoom: '<b>Oups, y a un souci avec la salle!</b>',
   closingRoom: ` ferme sa salle.`,
   connect: ` s'est connecté.e.`,
   disconnect: ` s'est déconnecté.e.`,
-  gameStarts: `<b>La partie commence...</b>`,
+  gameStarts: `<b>Et c'est parti!</b>`,
   interruptedGame: `Partie abandonnée dans la salle de `,
   joinedRoom: ` a rejoint la salle de `,
   leftRoom: ` a quitté la salle de `,
@@ -217,7 +248,7 @@ const messages = {
   maxPlayersReached: `Nombre de ${gameConfig.nbMaxPlayers} joueurs maximum atteint, vous pouvez démarrer la partie.`,
   notEnoughPlayers: `Il faut au moins ${gameConfig.nbMinPlayers} joueurs pour commencer à jouer.`,
   sessionNotFound: `Session non trouvée.`,
-  winner: ` a gagné la partie dans la salle de `
+  winner: ` est un.e <b>ouineur.se</b>!`
 }
 
 const reinitialisePlayers = function (players) {
@@ -232,54 +263,95 @@ const closeRoom = (room, lists, message) => {
   ioServer.emit('tracking', message);
   setTimeout(() => {
     ioServer.in(room.name).emit('resetRoom');
-  // libérer les joueurs et reinit score
-  reinitialisePlayers(room.players);
-  // salle retirée de la liste des salles en cours        
-  const indexofRoom = gameFct.getIndexof.room(roomsList, room.name);
-  roomsList.splice(indexofRoom, 1);
-  // envoi listes mises à jour
-  ioServer.emit('updateLists', lists, message);
+    // libérer les joueurs et reinit score
+    reinitialisePlayers(room.players);
+    // salle retirée de la liste des salles en cours        
+    const indexofRoom = roomFct.getIndexof.room(lists.rooms, room.name);
+    lists.rooms.splice(indexofRoom, 1);
+    // envoi listes mises à jour
+    ioServer.emit('updateLists', lists, message);
   }, 2000);
-  
+
 }
 
-const asyncRoomCall = async function (roomsList, roomName) {
-  return gameFct.manageRoom.getRoom(roomsList, roomName);
+const asyncRoomCall = async function (rooms, roomName) {
+  return roomFct.manageRoom.getRoom(rooms, roomName);
 }
 
-const getRoomAsync = async function (roomsList, roomName) {
-  let room = await asyncRoomCall(roomsList, roomName);
+const getRoomAsync = async function (rooms, roomName) {
+  let room = await asyncRoomCall(rooms, roomName);
   return room;
 }
 
+const getGames = async function () {
+
+  await Game.find().then(
+    (data) => {
+
+      lists.games = [];
+
+      if (data.length) {
+        // formattage du contenu de chaque partie pour un affichage dans une table
+        let thGame = `<th>Date</th><th>Durée</th><th>Tours</th>`;
+        for (let i = 0; i < 5; i++) {
+          thGame += `<th>Joueur: score </th>`;
+        }
+        lists.games.push(thGame);
+        data.forEach(game => {
+          let trGame = `<td>${tool.shortDate(game.startDate)}</td>`
+            + `<td>${tool.duration(game.startDate, game.endDate)}</td>`
+            + `<td>${game.nbRoundsPlayed}</td>`;
+
+          game.players.forEach(player => {
+            trGame += `<td>${player.pseudo}: ${player.score} </td>`;
+          })
+          lists.games.push(trGame);
+        });
+        console.log('game.find() ', lists.games);
+      }
+
+    }
+
+  ).catch((e) => {
+    console.log(e);
+  });
+}
+
+const updateGames = async function (game) {
+  console.log('> updateGames');
+  await game.save();
+  await getGames().then(() => {
+    console.log('> getGames().then ', lists);
+    ioServer.emit('updateLists', lists);
+  }).catch((e) => {
+    console.log(e);
+  });
+}
 /*============================================*
 *    Un utilisateur se connecte... 
 *=============================================*/
 
 ioServer.on("connect", function (ioSocket) {
-  // Récupérer les dernières parties en base
-  const lists = {
-    gamesList: gamesList,
-    roomsList: roomsList,
-    connections: connections
-  }
 
-  gameFct.dbGames.findGames(
-    {
-      done: (data) => {
-        console.log('gameFct.dbGames.findGames DONE', data)
-        gamesList = data;
-        ioServer.emit('updateLists', lists);
-      }
-    }
-  );
+  // Récupérer les parties en base
+  if (!lists.games.length) {
+    getGames().then(() => {
+      console.log('> getGames().then ', lists);
+      ioSocket.emit('updateLists', lists);
+    }).catch((e) => {
+      console.error(e);
+      ioSocket.emit('msgGames', messages.bugGames);
+    });
+  } else {
+    ioSocket.emit('updateLists', lists);
+  }
 
   /*========================================================================*
   *         ...il veut jouer
   *========================================================================*/
 
   ioSocket.on("addPlayer", function (sessionOtherId) {
-    
+
     // Chercher en base la session avec l'id fourni par le client
     dbQuery.find({
       collectionName: 'sessions',
@@ -305,10 +377,10 @@ ioServer.on("connect", function (ioSocket) {
               connectId: ioSocket.id,
               player: ioSocket.player
             };
-            connections.push(connection);
+            lists.connections.push(connection);
             // Envoyer la liste des joueurs connectés pour mise à jour 
             const message = ioSocket.player.pseudo + messages.connect;
-            ioServer.emit('updateConnections', connections, message);
+            ioServer.emit('updateConnections', lists.connections, message);
           } else {
             console.log('session non trouvée');
             // Envoyer au client l'info que la session n'existe pas
@@ -351,7 +423,7 @@ ioServer.on("connect", function (ioSocket) {
     ioSocket.player.roomName = room.name;
 
     //ajout dans la liste des salles
-    roomsList.push(room);
+    lists.rooms.push(room);
     // Envoyer aux joueurs de la salle la mise à jour des joueurs 
     ioServer.in(room.name).emit('displayRoom', room, true);
 
@@ -403,7 +475,7 @@ ioServer.on("connect", function (ioSocket) {
       return;
     }
 
-    getRoomAsync(roomsList, roomName).then((room) => {
+    getRoomAsync(lists.rooms, roomName).then((room) => {
 
       // Ajouter le joueur dans la salle        
       ioSocket.player.roomName = roomName;
@@ -415,17 +487,21 @@ ioServer.on("connect", function (ioSocket) {
       ioServer.in(room.name).emit('displayRoom', room, false);
       // Envoyer à tous les joueurs connectés la liste des connexions suite à indisponibilité de ce joueur
       const message = ioSocket.player.pseudo + `${messages.joinedRoom} ${roomName}.`
-      ioServer.emit('updateConnections', connections, message);
+      ioServer.emit('updateConnections', lists.connections, message);
 
       // Le nombre de joueurs max dans une salle est atteinte
       if (room.players.length == gameConfig.nbMaxPlayers) {
         room.accessible = false;
-        console.log('salle devient inaccessible => màj liste ', roomsList);
+        console.log('salle devient inaccessible => màj liste ', lists.rooms);
         // Envoyer à tous les joueurs connectés la liste des salles suite à inaccessibilité de cette salle
-        ioServer.emit('updateRoomsList', roomsList, message);
+        ioServer.emit('updateRoomsList', lists.rooms, message);
         // Informer le créateur de la salle qu'il peut démarrer
         ioServer.in(`${room.socketId}`).emit('msgRoom', messages.maxPlayersReached);
       }
+
+    }).catch((e) => {
+      console.error(e);
+      ioSocket.emit('msgGames', messages.bugRoom);
     });
 
   });
@@ -443,7 +519,7 @@ ioServer.on("connect", function (ioSocket) {
   ioSocket.on("startGame", function () {
     console.log(`> startGame chez ${ioSocket.player.pseudo}`);
 
-    getRoomAsync(roomsList, ioSocket.player.roomName).then((room) => {
+    getRoomAsync(lists.rooms, ioSocket.player.roomName).then((room) => {
 
       if (room.players.length < gameConfig.nbMinPlayers) {
         ioSocket.emit('msgRoom', messages.notEnoughPlayers);
@@ -455,15 +531,19 @@ ioServer.on("connect", function (ioSocket) {
 
       // Envoyer à tous les joueurs connectés la liste des salles suite à inaccessibilité de cette salle
       const message = messages.startedRoom + `${ioSocket.player.pseudo}.`
-      ioServer.emit('updateRoomsList', roomsList, message);
+      ioServer.emit('updateRoomsList', lists.rooms, message);
 
       // Envoyer la 1ère question aux joueurs de la salle
       ioServer.in(room.name).emit('gameStarts', messages.gameStarts);
 
       setTimeout(() => {
         console.log('definition en salle ', room);
-        ioServer.in(room.name).emit('quiz', gameFct.manageRoom.sendWordDefinition(room))
+        ioServer.in(room.name).emit('quiz', roomFct.manageRoom.sendWordDefinition(room))
       }, gameConfig.timeoutDelay);
+
+    }).catch((e) => {
+      console.error(e);
+      ioSocket.emit('msgGames', messages.bugRoom);
     });
 
   });
@@ -475,7 +555,7 @@ ioServer.on("connect", function (ioSocket) {
   ioSocket.on("answer", function (answer) {
     console.log(`> answer ${ioSocket.player.pseudo} : ${answer}`)
     // Rechercher la salle du joueur
-    let room = gameFct.manageRoom.getRoom(roomsList, ioSocket.player.roomName);
+    let room = roomFct.manageRoom.getRoom(lists.rooms, ioSocket.player.roomName);
 
 
     /*--------------------------------------------*
@@ -486,7 +566,7 @@ ioServer.on("connect", function (ioSocket) {
 
       // mise à jour du score du joueur
       ioSocket.player.score++;
-      gameFct.manageRoom.updateScore(room.players, ioSocket.id);
+      roomFct.manageRoom.updateScore(room.players, ioSocket.id);
       // Envoyer à tous les joueurs de la salle la bonne réponse trouvée et la mise à jour du score du joueur gagnant      
       const message = `${ioSocket.player.pseudo} dit <b>${answer.toUpperCase()}</b>: bonne réponse`;
       ioServer.in(room.name).emit('showPlayerAnswer', message);
@@ -495,18 +575,18 @@ ioServer.on("connect", function (ioSocket) {
       // fin de partie       
       if (room.nbRoundsPlayed === gameConfig.nbMaxRounds) {
         // classement des joueurs
-        room.players = gameFct.manageRoom.rankPlayers(room.players);
+        room.players = roomFct.manageRoom.rankPlayers(room.players);
         room.gameOver = true;
-        
-        const message = room.players[0].pseudo + messages.winner + `${ioSocket.player.pseudo}.`
+
+        const message = room.players[0].pseudo + messages.winner;
 
         // Enregistrer en base la partie
-        let game = {
+        let game = new Game({
           startDate: room.startDate,
           endDate: Date.now(),
           players: [],
           nbRoundsPlayed: room.nbRoundsPlayed
-        };
+        });
         for (var i = 0; room.players[i]; i++) {
           const player = {
             pseudo: room.players[i].pseudo,
@@ -514,35 +594,21 @@ ioServer.on("connect", function (ioSocket) {
           }
           game.players.push(player);
         }
-        gameFct.dbGames.insertGame(
-          {
-            game: game,
-            done: (resultOk) => {
-              if (resultOk == '1') {
-                gameFct.dbGames.findGames(
-                  {
-                    done: (data) => {
-                      console.log('gameFct.dbGames.findGames DONE', data)
-                      gamesList = data;
-                      ioServer.emit('updateLists', lists);
-                      // Fermeture de la salle
-                        closeRoom(room, lists, message);                        
-                      
-                    }
-                  }
-                );
-              }
-
-            }
-          });
-
-
+        // insertion en base de la partie et mise à joour de la liste des parties
+        updateGames(game).then(() => {
+          console.log('> updateGames().then ', lists);
+          closeRoom(room, lists, message);
+        }).catch((e) => {
+          console.error(e);
+          ioServer.emit('msgGames', messages.bugRoom);
+        });
+        
       } else {
         // Nouvelle définition à envoyer aux joueurs de la salle
         console.log('room.selectedWords', room.selectedWords);
         setTimeout(() => {
           console.log('nouvelle définition ', room);
-          ioServer.in(room.name).emit('quiz', gameFct.manageRoom.sendWordDefinition(room))
+          ioServer.in(room.name).emit('quiz', roomFct.manageRoom.sendWordDefinition(room))
         }, gameConfig.timeoutDelay);
       }
 
@@ -565,15 +631,15 @@ ioServer.on("connect", function (ioSocket) {
   ioSocket.on('leaveRoom', function () {
     console.log(`> leaveRoom de ${ioSocket.player.pseudo} de ${ioSocket.player.roomName}`);
 
-    getRoomAsync(roomsList, ioSocket.player.roomName).then((room) => {
+    getRoomAsync(lists.rooms, ioSocket.player.roomName).then((room) => {
 
       delete (ioSocket.player.roomName);
       ioSocket.player.score = 0;
       const message = `${ioSocket.player.pseudo}` + messages.leftRoom;
-      ioServer.emit('updateConnections', connections, message);
+      ioServer.emit('updateConnections', lists.connections, message);
 
       // retirer le joueur de la salle
-      const indexofPlayer = gameFct.getIndexof.player(room.players, ioSocket.player.pseudo);
+      const indexofPlayer = roomFct.getIndexof.player(room.players, ioSocket.player.pseudo);
       room.players.splice(indexofPlayer, 1);
 
       // envoyer demandes de réaffichage au client 
@@ -589,6 +655,10 @@ ioServer.on("connect", function (ioSocket) {
         ioServer.in(room.name).emit('msgGames', message);
         closeRoom(room, lists, message);
       }
+
+    }).catch((e) => {
+      console.error(e);
+      ioServer.in(room.name).emit('msgGames', messages.bugRoom);
     });
 
   });
@@ -600,12 +670,15 @@ ioServer.on("connect", function (ioSocket) {
 
   ioSocket.on('closeRoom', function () {
 
-    getRoomAsync(roomsList, ioSocket.player.roomName).then((room) => {
-
+    const roomName = ioSocket.player.roomName;
+    getRoomAsync(lists.rooms, roomName).then((room) => {
       const message = ioSocket.player.pseudo + messages.closingRoom;
       // Fermeture de la salle
       closeRoom(room, lists, message);
 
+    }).catch((e) => {
+      console.error(e);
+      ioSocket.in(roomName).emit('msgGames', messages.bugRoom);
     });
 
   });
@@ -621,7 +694,7 @@ ioServer.on("connect", function (ioSocket) {
     //le joueur est dans une salle
     if (ioSocket.player.roomName) {
 
-      getRoomAsync(roomsList, ioSocket.player.roomName).then((room) => {
+      getRoomAsync(lists.rooms, ioSocket.player.roomName).then((room) => {
 
         // il s'agit de sa salle
         if (room.socketId === ioSocket.id) {
@@ -631,7 +704,7 @@ ioServer.on("connect", function (ioSocket) {
         } else {
 
           // ce n'est pas sa salle, il faut l'en retirer
-          const indexofPlayer = gameFct.getIndexof.player(room.players, ioSocket.player.pseudo);
+          const indexofPlayer = roomFct.getIndexof.player(room.players, ioSocket.player.pseudo);
           room.players.splice(indexofPlayer, 1);
 
           // envoyer demandes de réaffichage au client    
@@ -646,7 +719,10 @@ ioServer.on("connect", function (ioSocket) {
           }
         }
 
-      })
+      }).catch((e) => {
+        console.error(e);
+        ioSocket.emit('msgGames', messages.bugDisconnect);
+      });
     }
 
   });
