@@ -9,10 +9,11 @@ html(lang="en")
         #gameIntro 
             - var sessionOtherId = otherId
             p Bonjour #{pseudo}!
-            p Est-ce que votre anglais technique assure ? Vous pouvez vous tester en jouant contre 1 jusqu'à 5 autres joueurs. 30s pour trouver le mot répondant à la définition proposée. Le premier qui trouve marque 1 point. Et qui c'est qui gagne ? Celui qui a le plus de points après 10 tours. Vous pouvez initier une partie (cela crée une salle) ou cliquer sur une salle accessible. 
+            p Votre anglais technique déchire ? Testez-vous et jouez contre 1 jusqu'à 3 autres joueurs. 30s pour trouver le mot répondant à la définition proposée. Le premier qui trouve marque 1 point. Et qui c'est-y qui gagne ? Celui qui a le plus de points après 10 tours. 
+            p Initier une partie (cela crée une salle) ou rejoingnez une salle accessible en cliquant dessus. 
             form(id="playForm" method="POST")
                     input(type="text", name="sessionOtherId", id="sessionOtherId", value=sessionOtherId)               
-                    input(type="submit", value="On y va !")
+                    input(type="submit", value="Let's get started!")
 
         #gamesOverview
             h3 Dernières parties

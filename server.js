@@ -234,6 +234,7 @@ const gameConfig = {
 const messages = {
   alreadyInRoom: 'Vous êtes déjà dans une salle.',
   bugDisconnect: '<b>Oups, la machine ne veut pas vous laisser partir!</b>',
+  bugDico: '<b>Oups, y a un souci avec le dico!</b>',
   bugGames: '<b>Oups, la liste des parties est indisponible!</b>',
   bugRoom: '<b>Oups, y a un souci avec la salle!</b>',
   closingRoom: ` ferme sa salle.`,

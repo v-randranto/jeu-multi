@@ -1,10 +1,8 @@
 'use strict'
 
 const mongoose = require('mongoose');
-const Schema = mongoose.Schema;
 
-
-const dictionnarySchema = new Schema({
+const dictionnarySchema = mongoose.Schema({
     word: String,
     definition: String,
 });
