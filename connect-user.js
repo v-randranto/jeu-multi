@@ -7,18 +7,30 @@ const sessionInfos = function (parameters) {
   parameters.session.pseudo = parameters.body.pseudo;
   parameters.session.otherId = uuidv4();
   console.log("exports : req session uuid ", parameters.session.otherId);
-  // parameters.interpolations.pseudo = parameters.body.pseudo;
    parameters.interpolations.otherId = parameters.session.otherId;
 }
 
 exports.connect = function (parameters) {
   parameters.interpolations.pseudo = parameters.body.pseudo;
   const result = {};
-  // User already connected
+  if (!parameters.body.pseudo || !parameters.body.pwd) {
+    console.log('> pseudo ou pwd non renseignés', parameters.body);
+    parameters.interpolations.msgError = 'Oups, saisie incomplète';
+    result.validCredentials = false;
+    parameters.done(result);
+    return;
+  }
+  if (!parameters.login && !parameters.body.confirm) {
+    console.log('> pwd non renseigné', parameters.body);
+    parameters.interpolations.msgError = 'Oups, saisie incomplète';
+    result.validCredentials = false;
+    parameters.done(result);
+  }
   if (parameters.session.pseudo) {
     result.alreadyConnected = true;
     console.log('> exports : session existante pour ', parameters.session.pseudo);
     parameters.done(result);
+    return;
   }
 
   console.log('> exports : pas de session en cours ')
@@ -53,7 +65,7 @@ exports.connect = function (parameters) {
 
         }
         console.log('> login : identifiants KO');
-        parameters.interpolations.msgError = 'Vos identifiants sont incorrects.';
+        parameters.interpolations.msgError = 'Oups, identifiants incorrects.';
         parameters.done(result);
         return;
       }
@@ -62,7 +74,7 @@ exports.connect = function (parameters) {
       console.log('> exports : register');
       if (userFound) {
         console.log('> register : pseudo déjà pris');
-        parameters.interpolations.msgError = 'Le pseudo déjà utilisé.';
+        parameters.interpolations.msgError = 'Oups, pseudo déjà utilisé.';
         parameters.done(result);
         return;
       }
@@ -98,7 +110,7 @@ exports.connect = function (parameters) {
       }
 
       console.log('> register : identifiants KO');
-      parameters.interpolations.msgError = 'Votre mot de passe et sa confirmation sont différents';
+      parameters.interpolations.msgError = 'Oups, mot de passe et confirmation différents';
       parameters.done(result);
     }
   });

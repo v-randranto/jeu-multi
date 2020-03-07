@@ -1,6 +1,6 @@
 body {
   background-color: darkslategray;
-  color: antiquewhite;
+  color: ivory;;
 }
 body.error {
   background-color: darkred;
@@ -18,7 +18,7 @@ button {
   margin: 20px;
 }
 a {
-  color: antiquewhite;
+  color: ivory;;
 }
 
 #connexion {
@@ -27,10 +27,11 @@ a {
   left: 0;
 }
 
-#login, #register {  
-  position: absolute;
-  top: 50px;
-  left: 0;
+#login, #register {   
+  margin-top: 100px; 
+  border-radius: 15px;
+  background-color: tan;
+  color: black;
 }
 
 #register, #gamesOverview, #tracking, #gameRoom, #sessionOtherId, #room, #quiz {

@@ -2,15 +2,16 @@
 html(lang="en")
     head
         meta(charset="UTF-8")
+        meta(name='viewport', content='width=device-width, initial-scale=1, shrink-to-fit=no')
         title Jeu
         link(rel="stylesheet", href="css/style.css") 
     body
         a(href="/logout") Déconnexion
         #gameIntro 
             - var sessionOtherId = otherId
-            p Bonjour #{pseudo}!
+            p Bonjour #{pseudo}!            
             p Votre anglais technique déchire ? Testez-vous et jouez contre 1 jusqu'à 3 autres joueurs. 30s pour trouver le mot répondant à la définition proposée. Le premier qui trouve marque 1 point. Et qui c'est-y qui gagne ? Celui qui a le plus de points après 10 tours. 
-            p Initier une partie (cela crée une salle) ou rejoingnez une salle accessible en cliquant dessus. 
+            p Initier une partie (cela crée une salle) ou rejoignez une salle accessible en cliquant dessus. 
             form(id="playForm" method="POST")
                     input(type="text", name="sessionOtherId", id="sessionOtherId", value=sessionOtherId)               
                     input(type="submit", value="Let's get started!")
