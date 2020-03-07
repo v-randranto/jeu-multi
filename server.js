@@ -10,6 +10,7 @@ const express = require("express");
 const expressSession = require("express-session");
 const MongoStore = require("connect-mongo")(expressSession);
 const bodyParser = require('body-parser');
+const cors = require('cors');
 const mongoose = require('mongoose');
 const User = require('./schemas/user');
 const Game = require('./schemas/game');
@@ -23,6 +24,8 @@ const dbQuery = require('./db-manager');
 const titres = require('./titres');
 
 const app = express();
+// autoriser les requêtes CORS
+app.use(cors());
 /* Template engine */
 app.set('view engine', 'pug');
 
@@ -52,13 +55,12 @@ const options = {
   resave: false
 };
 
-// autoriser les requêtes CORS
-app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content, Accept, Content-Type, Authorization');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-  next();
-});
+// app.use((req, res, next) => {
+//   res.setHeader('Access-Control-Allow-Origin', '*');
+//   res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content, Accept, Content-Type, Authorization');
+//   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+//   next();
+// });
 
 app.use(expressSession(options));
 
@@ -137,7 +139,7 @@ app.post('/login', function (req, res) {
 app.get('/register', function (req, res, next) {
   console.log('>app.get register ', req.originalUrl);
   if (req.session.pseudo) {
-    res.render('game', interpolations);
+    res.redirect(301, '/game');
     return;
   }
   res.render('register', interpolations);
