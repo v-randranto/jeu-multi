@@ -2,6 +2,7 @@
  *  FRONT : GESTION DU JEU - CONNEXION SOCKET.IO
  * TODO commentaires
  ****************************************************************/
+var htmlGameIntro = document.getElementById('game');
 var htmlPlayForm = document.getElementById('playForm');
 
 var htmlGamesOverview = document.getElementById('gamesOverview');
@@ -154,7 +155,6 @@ window.addEventListener("DOMContentLoaded", function () {
             // envoi du 2ème id de la session
             ioSocket.emit("addPlayer", htmlPlayForm.sessionOtherId.value);
 
-            document.getElementById('playForm').style.display = "none";
             htmlGamesOverview.style.visibility = "visible";
             htmlTracking.style.visibility = "visible";
         })

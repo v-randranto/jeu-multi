@@ -13,18 +13,17 @@ html(lang="fr")
                 form(id="registerForm" action="/register", method="POST")
                     .form-group
                         label Pseudo
-                        input(type="text", class="form-control", name="pseudo"  value=pseudoValue, onfocus="this.value=''" required maxlength="20")
+                        input.form-control(type="text", name="pseudo"  value=pseudoValue, onfocus="this.value=''" required maxlength="20")
                     .form-group
                         label Mot de passe
-                        input(type="text", class="form-control", name="pwd",    onfocus="thivalue=''" required maxlength="10")
+                        input.form-control(type="text", name="pwd",    onfocus="thivalue=''" required maxlength="10")
                     .form-group
                         label Confirmation mot de passe
-                        input(type="text", class="form-control", name="confirm" required)
-                        p 
-                    button(type="submit", class="btn btn-secondary") Validez
-                    p(class="text-danger")=msgError  
-                p(class="text-right p-3")    
-                    a(href="/login" class="connectLink text-right") On se connait déjà? 
+                        input.form-control(type="text", name="confirm" required)
+                    button.btn.btn-secondary(type="submit") Validez
+                    p.text-danger=msgError  
+                p.text-right.p-3  
+                    a.connectLink(href="/login") On se connait déjà? 
 
         script(src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous")
         script(src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous")

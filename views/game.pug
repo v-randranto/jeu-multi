@@ -4,50 +4,66 @@ html(lang="en")
         meta(charset="UTF-8")
         meta(name='viewport', content='width=device-width, initial-scale=1, shrink-to-fit=no')
         title Jeu
+        link(rel="stylesheet", href="css/style.css")
+        link(rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous")  
         link(rel="stylesheet", href="css/style.css") 
     body
-        a(href="/logout") Déconnexion
+      .container
+        
         #gameIntro 
+          div.col-8.offset-2.mt-10
             - var sessionOtherId = otherId
-            p Bonjour #{pseudo}!            
-            p Votre anglais technique déchire ? Testez-vous et jouez contre 1 jusqu'à 3 autres joueurs. 30s pour trouver le mot répondant à la définition proposée. Le premier qui trouve marque 1 point. Et qui c'est-y qui gagne ? Celui qui a le plus de points après 10 tours. 
-            p Initier une partie (cela crée une salle) ou rejoignez une salle accessible en cliquant dessus. 
-            form(id="playForm" method="POST")
-                    input(type="text", name="sessionOtherId", id="sessionOtherId", value=sessionOtherId)               
-                    input(type="submit", value="Let's get started!")
-
-        #gamesOverview
-            h3 Dernières parties
-            table(id="gamesList")               
-                        
-            h3 Salles de jeu en cours
-            p(id="roomsList")
-            h3 Joueurs connectés 
-            p(id="connections") 
-
-            button(id="initGameBtn") Initier une partie 
-            p(id="msgGames")
-
-        #tracking
-            ul
-
-        #room 
-            #roomPlayers 
-            p(id="msgRoom") 
-            #roomButtons          
-                button(id="startGameBtn") Démarrer la partie
-                button(id="closeRoomBtn") Fermer la salle
-                button(id="leaveRoomBtn") Quitter la salle                     
-            #quiz
-                p(id="word")
-                p(id="definition") 
-                p(id="msgAnswer")           
-                form(id="answerForm")
-                    p Votre réponse : 
-                        input(type="text", name="answer", onfocus="this.value=''" )
-                    p 
-                        input(type="submit", value="Envoyer")
-
-       
-        script(src="/socket.io/socket.io.js")
-        script(src="../js/game.js")
+            .jumbotron
+              .h4 Bonjour #{pseudo}!            
+              p.lead.text-justify.mt-3 Ton anglais technique déchire ? Teste-le avec un quiz contre d'autres joueurs. Le premier qui trouve le mot répondant à la définition proposée marque 1 point. Et qui c'est-y qui gagne ? Celui qui a le plus de points après 10 tours. 
+             
+              form(id="playForm" method="POST")
+                input.invisible(type="text", name="sessionOtherId", id="sessionOtherId" value=sessionOtherId) 
+                button.btn.btn-info.mt-3(type="submit") On y va?  
+        
+        #gamesOverview 
+          .overflow-auto   
+            .h4 Parties jouées  
+            table#gamesList.table  
+          .overflow-auto.rounded-lg                  
+            .h4 Salles de jeu en cours
+            p#roomsList.overflow-auto
+          .overflow-auto.rounded-lg 
+            .h4 Joueurs connectés 
+            p#connections.overflow-auto
+          .overflow-auto.rounded-lg 
+            p#tracking.overflow-auto
+              ul 
+             
+          button.btn.btn-success.m-3(id="initGameBtn") Initier une partie
+          p.text-muted Initiez une partie (cela crée une salle) ou rejoignez une salle accessible en cliquant dessus.
+              
+        #room.rounded-lg    
+          #roomPlayers 
+          p#msgRoom 
+          #roomButtons    
+              button.btn.btn-success.m-3(type="submit", id="startGameBtn") Démarrer la partie
+              button.btn.btn-primary.m-3(type="submit", id="closeRoomBtn") Fermer la salle
+              button.btn.btn-warning.m-3(type="submit", id="leaveRoomBtn") Quitter la salle                     
+          #quiz.rounded-lg
+            p#word
+            p#definition 
+            p#msgAnswer           
+            form#answerForm
+                label Votre réponse 
+                input.form-control(type="text", name="answer", onfocus="this.value=''" )
+                button.btn.btn-info.m-3(type="submit", class="") Envoyer
+        
+        div.col.border
+             
+          
+    script(src="/socket.io/socket.io.js")
+    script(src="../js/game.js")
+    script(src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.slim.min.js"
+      integrity="sha256-k2WSCIexGzOj3Euiig+TlR8gA0EmPjuc79OEeY5L45g="
+      crossorigin="anonymous"
+    )
+    script(src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.1.0/js/bootstrap.bundle.min.js"
+      integrity="sha256-78rSZBnBJXmJ5VGuWL8mkunvhy94g99Rw53bssjHSUk="
+      crossorigin="anonymous"
+    )

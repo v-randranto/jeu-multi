@@ -282,20 +282,15 @@ const getGames = async function () {
       lists.games = [];
 
       if (data.length) {
-        // formattage du contenu de chaque partie pour un affichage dans une table
-        let thGame = `<th>Date</th><th>Durée</th><th>Tours</th>`;
-        for (let i = 0; i < 5; i++) {
-          thGame += `<th>Joueur: score </th>`;
-        }
-        lists.games.push(thGame);
         data.forEach(game => {
-          let trGame = `<td>${tool.shortDate(game.startDate)}</td>`
+          let trGame = `<tr><td>${tool.shortDate(game.startDate)}</td>`
             + `<td>${tool.duration(game.startDate, game.endDate)}</td>`
-            + `<td>${game.nbRoundsPlayed}</td>`;
+            + `<td>${game.nbRoundsPlayed} tours</td>`;
 
           game.players.forEach(player => {
             trGame += `<td>${player.pseudo}: ${player.score} </td>`;
           })
+          trGame += `</tr>`;
           lists.games.push(trGame);
         });
         console.log('game.find() ', lists.games);

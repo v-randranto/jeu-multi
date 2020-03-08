@@ -1,40 +1,22 @@
-body {
+/* body {
   background-color: darkslategray;
-  color: ivory;;
+  color: ivory;
 }
 body.error {
   background-color: darkred;
 }
 
-.error {
-  color: red;
-  font-weight: bold;
-}
-.info {
-  color: yellow;
-  font-weight: bold;
-}
-button {
-  margin: 20px;
-}
 a {
   color: ivory;;
 }
 
-#connexion {
-  position:relative;
-  top: 0;
-  left: 0;
-}
-
-#login, #register {   
-  margin-top: 100px; 
+#login, #register { 
   border-radius: 15px;
   background-color: tan;
   color: black;
-}
+} */
 
-#register, #gamesOverview, #tracking, #gameRoom, #sessionOtherId, #room, #quiz {
+#register, #gamesOverview, #tracking, #gameRoom, #room, #quiz {
   visibility: hidden;
 }
 
@@ -42,6 +24,3 @@ a {
   cursor: pointer;
 }
 
-th, tr {
-  padding: 5px 10px;
-}
