@@ -1,20 +1,3 @@
-/* body {
-  background-color: darkslategray;
-  color: ivory;
-}
-body.error {
-  background-color: darkred;
-}
-
-a {
-  color: ivory;;
-}
-
-#login, #register { 
-  border-radius: 15px;
-  background-color: tan;
-  color: black;
-} */
 
 #register, #game, #gameOverview,  #gameRoom, #room, #quiz {
   visibility: hidden;
