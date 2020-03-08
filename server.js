@@ -217,11 +217,10 @@ const lists = {
 const gameConfig = {
   nbMaxPlayers: 4,
   nbMinPlayers: 2,
-  nbMaxRounds: 5,
-  timeoutDelay: 2000
+  nbMaxRounds: 5
 }
 
-const messages = {
+const messages = {  
   alreadyInRoom: 'Vous êtes déjà dans une salle.',
   bugDisconnect: '<b>Oups, la machine ne veut pas vous laisser partir!</b>',
   bugDico: '<b>Oups, y a un souci avec le dico!</b>',
@@ -239,7 +238,7 @@ const messages = {
   maxPlayersReached: `Nombre de ${gameConfig.nbMaxPlayers} joueurs maximum atteint, vous pouvez démarrer la partie.`,
   notEnoughPlayers: `Il faut au moins ${gameConfig.nbMinPlayers} joueurs pour commencer à jouer.`,
   sessionNotFound: `Session non trouvée.`,
-  winner: ` est un.e <b>ouineur.se</b>!`
+  winner: ` est un.e <b>WINNER</b>!`
 }
 
 const reinitialisePlayers = function (players) {
@@ -252,7 +251,6 @@ const reinitialisePlayers = function (players) {
 
 const closeRoom = (room, lists, message) => {
   ioServer.emit('tracking', message);
-  setTimeout(() => {
     ioServer.in(room.name).emit('resetRoom');
     // libérer les joueurs et reinit score
     reinitialisePlayers(room.players);
@@ -261,7 +259,6 @@ const closeRoom = (room, lists, message) => {
     lists.rooms.splice(indexofRoom, 1);
     // envoi listes mises à jour
     ioServer.emit('updateLists', lists, message);
-  }, 2000);
 
 }
 
@@ -319,24 +316,20 @@ const updateGames = async function (game) {
 
 ioServer.on("connect", function (ioSocket) {
 
-  // Récupérer les parties en base
-  if (!lists.games.length) {
-    getGames().then(() => {
-      console.log('> getGames().then ', lists);
-      ioSocket.emit('updateLists', lists);
-    }).catch((e) => {
-      console.error(e);
-      ioSocket.emit('msgGames', messages.bugGames);
-    });
-  } else {
-    ioSocket.emit('updateLists', lists);
-  }
 
   /*========================================================================*
   *         ...il veut jouer
   *========================================================================*/
 
   ioSocket.on("addPlayer", function (sessionOtherId) {
+    console.log('> addPlayer', sessionOtherId)
+    // Récupérer les parties en base
+    if (!lists.games.length) {
+      getGames().then(() => {
+        // console.log('> getGames().then ', lists);
+        // ioSocket.emit('updateLists', lists);
+      });
+    }
 
     // Chercher en base la session avec l'id fourni par le client
     dbQuery.find({
@@ -351,6 +344,7 @@ ioServer.on("connect", function (ioSocket) {
         } else {
           // Session trouvée: attacher le joueur et l'id session à la connexion
           if (data.length) {
+
             const sessionFound = JSON.parse(data[0].session);
 
             ioSocket.player = {
@@ -364,9 +358,11 @@ ioServer.on("connect", function (ioSocket) {
               player: ioSocket.player
             };
             lists.connections.push(connection);
-            // Envoyer la liste des joueurs connectés pour mise à jour 
-            const message = ioSocket.player.pseudo + messages.connect;
-            ioServer.emit('updateConnections', lists.connections, message);
+
+            // Envoyer la liste des joueurs connectés pour mise à jour            
+            const message = `${tool.shortTime(Date.now())} <b>${ioSocket.player.pseudo}</b> ${messages.connect}`;
+            //ioServer.emit('updateConnections', lists.connections, message);
+            ioServer.emit('updateLists', lists, message);
           } else {
             console.log('session non trouvée');
             // Envoyer au client l'info que la session n'existe pas
@@ -415,7 +411,7 @@ ioServer.on("connect", function (ioSocket) {
 
     // Envoyer à tous les joueurs les listes pour réaffichage
     // (indisponibilité d'un joueur et d'une salle)
-    const message = ioSocket.player.pseudo + `${messages.openRoom}.`;
+    const message = `${tool.shortTime(Date.now())} <b>${ioSocket.player.pseudo}</b> ${messages.openRoom}`;
     ioServer.emit('updateLists', lists, message);
 
     // charger une sélection du dico dans la salle (provisoire) TODO 
@@ -471,8 +467,8 @@ ioServer.on("connect", function (ioSocket) {
       // Envoyer à tous les joueurs de la salle la liste de ses joueurs suite à l'ajout
 
       ioServer.in(room.name).emit('displayRoom', room, false);
-      // Envoyer à tous les joueurs connectés la liste des connexions suite à indisponibilité de ce joueur
-      const message = ioSocket.player.pseudo + `${messages.joinedRoom} ${roomName}.`
+      // Envoyer à tous les joueurs connectés la liste des connexions suite à indisponibilité de ce joueur      
+      const message = `${tool.shortTime(Date.now())} <b>${ioSocket.player.pseudo}</b> ${messages.joinedRoom} ${roomName}.`;
       ioServer.emit('updateConnections', lists.connections, message);
 
       // Le nombre de joueurs max dans une salle est atteinte
@@ -516,7 +512,7 @@ ioServer.on("connect", function (ioSocket) {
       room.accessible = false;
 
       // Envoyer à tous les joueurs connectés la liste des salles suite à inaccessibilité de cette salle
-      const message = messages.startedRoom + `${ioSocket.player.pseudo}.`
+      const message = `${tool.shortTime(Date.now())} ${messages.startedRoom} <b>${ioSocket.player.pseudo}</b>.`;
       ioServer.emit('updateRoomsList', lists.rooms, message);
 
       // Envoyer la 1ère question aux joueurs de la salle
@@ -564,7 +560,7 @@ ioServer.on("connect", function (ioSocket) {
         room.players = roomFct.manageRoom.rankPlayers(room.players);
         room.gameOver = true;
 
-        const message = room.players[0].pseudo + messages.winner;
+        const message = `${tool.shortTime(Date.now())} <b>${room.players[0].pseudo}</b> ${messages.winner}!`;
 
         // Enregistrer en base la partie
         let game = new Game({
@@ -580,15 +576,18 @@ ioServer.on("connect", function (ioSocket) {
           }
           game.players.push(player);
         }
-        // insertion en base de la partie et mise à joour de la liste des parties
+        // insertion en base de la partie puis clôture de la salle
         updateGames(game).then(() => {
           console.log('> updateGames().then ', lists);
-          closeRoom(room, lists, message);
+          setTimeout(function(){
+            closeRoom(room, lists, message);
+          }, 2000);
+          
         }).catch((e) => {
           console.error(e);
           ioServer.emit('msgGames', messages.bugRoom);
         });
-        
+
       } else {
         // Nouvelle définition à envoyer aux joueurs de la salle
         console.log('room.selectedWords', room.selectedWords);
@@ -621,7 +620,7 @@ ioServer.on("connect", function (ioSocket) {
 
       delete (ioSocket.player.roomName);
       ioSocket.player.score = 0;
-      const message = `${ioSocket.player.pseudo}` + messages.leftRoom;
+      const message = `${tool.shortTime(Date.now())} <b>${ioSocket.player.pseudo}</b> ${messages.leftRoom} ${room.name}.`;
       ioServer.emit('updateConnections', lists.connections, message);
 
       // retirer le joueur de la salle
@@ -636,10 +635,12 @@ ioServer.on("connect", function (ioSocket) {
       ioSocket.emit('resetRoom');
 
       // Fermeture de la salle s'il ne reste plus qu'un joueur sur une partie commencée
-      if (room.players.length === 1 && room.nbRoundsPlayed > 0) {
-        const message = messages.interruptedGame + `${ioSocket.player.pseudo}.`;
+      if (room.players.length === 1 && room.nbRoundsPlayed > 0) {        
+        const message = `${tool.shortTime(Date.now())} ${messages.interruptedGame} <b>${ioSocket.player.pseudo}</b>.`;
         ioServer.in(room.name).emit('msgGames', message);
-        closeRoom(room, lists, message);
+        setTimeout(function(){
+          closeRoom(room, lists, message);
+        }, 2000);
       }
 
     }).catch((e) => {
@@ -658,7 +659,7 @@ ioServer.on("connect", function (ioSocket) {
 
     const roomName = ioSocket.player.roomName;
     getRoomAsync(lists.rooms, roomName).then((room) => {
-      const message = ioSocket.player.pseudo + messages.closingRoom;
+      const message = `${tool.shortTime(Date.now())} <b>${ioSocket.player.pseudo}</b> ${messages.closingRoom}`;
       // Fermeture de la salle
       closeRoom(room, lists, message);
 
@@ -684,8 +685,7 @@ ioServer.on("connect", function (ioSocket) {
 
         // il s'agit de sa salle
         if (room.socketId === ioSocket.id) {
-          const message = ioSocket.player.pseudo + messages.disconnect;
-
+          const message = `${tool.shortTime(Date.now())} <b>${ioSocket.player.pseudo}</b> ${messages.disconnect}`;
           closeRoom(room, lists, message);
         } else {
 
@@ -693,13 +693,13 @@ ioServer.on("connect", function (ioSocket) {
           const indexofPlayer = roomFct.getIndexof.player(room.players, ioSocket.player.pseudo);
           room.players.splice(indexofPlayer, 1);
 
-          // envoyer demandes de réaffichage au client    
-          const message = `${ioSocket.player.pseudo}` + messages.leftRoom + room.name;
+          // envoyer demandes de réaffichage au client             
+          const message = `${tool.shortTime(Date.now())} <b>${ioSocket.player.pseudo}</b> ${messages.leftRoom} ${room.name}.`;
           ioServer.in(room.name).emit('playerLeaveRoom', room.players, message);
 
           // Fermeture de la salle s'il ne reste plus qu'un joueur sur une partie commencée
           if (room.players.length === 1 && room.nbRoundsPlayed > 0) {
-            const message = messages.interruptedGame + `${ioSocket.player.pseudo}.`;
+            const message = `${tool.shortTime(Date.now())} ${messages.interruptedGame} <b>${ioSocket.player.pseudo}</b>.`;
             ioServer.in(room.name).emit('msgGames', message);
             closeRoom(room, lists, message);
           }

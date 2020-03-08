@@ -2,10 +2,10 @@
  *  FRONT : GESTION DU JEU - CONNEXION SOCKET.IO
  * TODO commentaires
  ****************************************************************/
-var htmlGameIntro = document.getElementById('game');
+var htmlGameIntro = document.getElementById('gameIntro');
 var htmlPlayForm = document.getElementById('playForm');
 
-var htmlGamesOverview = document.getElementById('gamesOverview');
+var htmlGameOverview = document.getElementById('gameOverview');
 var htmlGamesList = document.getElementById('gamesList');
 var htmlRoomsList = document.getElementById('roomsList');
 var htmlConnections = document.getElementById('connections');
@@ -18,21 +18,19 @@ var htmlRoomButtons = document.getElementById('roomButtons');
 var htmlRoomMsg = document.getElementById('msgRoom');
 var htmlQuiz = document.getElementById('quiz');
 var htmlAnswserForm = document.getElementById('answerForm');
-var htmlTracking = document.querySelector('#tracking ul');
+var htmlTracking = document.getElementById('tracking');
+var nbTracks = 0;
 
 
 /*********************************************
  * FONCTIONS DE MISE A JOUR DES LISTES
  **********************************************/
 var updateTracking = function (message) {
-    var htmlItem = document.createElement('li');
-    htmlItem.innerHTML = message;
-    htmlTracking.appendChild(htmlItem);
-
+    var previousTracks = htmlTracking.innerHTML;
+    htmlTracking.innerHTML = `${message} <br> ${previousTracks}`;
 }
 
 var updateGamesList = function (gamesList) {
-    console.log('>updateGamesList')
     // mise à jour de la liste des parties
     var htmlTable = document.querySelector('#gamesList');
     htmlTable.innerHTML = '';
@@ -48,14 +46,10 @@ var updateGamesList = function (gamesList) {
 }
 
 var updateRoomsList = function (roomsList, ioSocketId, message) {
-    console.log('> updateRoomsList')
     // mise à jour de la liste des salles
-    var htmlList = document.querySelector('#roomsList ul');
-    if (!htmlList) {
-        htmlList = document.createElement('ul');
-        htmlRoomsList.appendChild(htmlList);
-    }
-    htmlList.innerHTML = '';
+    htmlRoomsList.innerHTML = '';
+    var htmlList = document.createElement('ul');
+    htmlRoomsList.appendChild(htmlList);
     for (var i = 0; roomsList[i]; i++) {
         var room = roomsList[i];
         var htmlItem = document.createElement('li');
@@ -78,14 +72,10 @@ var updateRoomsList = function (roomsList, ioSocketId, message) {
 }
 
 var updateConnections = function (connections, message) {
-    console.log('> updateConnections', message)
     // mise à jour de la liste des joueurs connectés
-    var htmlList = document.querySelector('#connections ul');
-    if (!htmlList) {
-        htmlList = document.createElement('ul');
-        htmlConnections.appendChild(htmlList);
-    }
-    htmlList.innerHTML = '';
+    htmlConnections.innerHTML = '';
+    var htmlList = document.createElement('ul');
+    htmlConnections.appendChild(htmlList);
     for (var i = 0; connections[i]; i++) {
         var player = connections[i].player;
         var htmlItem = document.createElement('li');
@@ -99,7 +89,6 @@ var updateConnections = function (connections, message) {
 }
 
 var updateRoomPlayers = function (roomPlayers) {
-    console.log('> updateRoomPlayers')
     // mise à jour de la salle à laquelle un joueur participe    
     htmlRoomPlayers.innerHTML = '';
     for (var i = 0; roomPlayers[i]; i++) {
@@ -131,7 +120,6 @@ var resetRoom = function () {
 
 window.addEventListener("DOMContentLoaded", function () {
 
-
     /***********************************************************
      * CONNEXION SOCKET.IO 
      * TODO: commentaires
@@ -144,39 +132,36 @@ window.addEventListener("DOMContentLoaded", function () {
      *=============================================================*/
 
     ioSocket.on("connect", function () {
-        console.log('ioSocket : ', ioSocket);
-
+        
+        htmlTracking.innerHTML = '';
         htmlPlayForm.addEventListener('submit', function (event) {
-            console.log('> submit play form');
-            console.log('sessionOtherId : ', htmlPlayForm.sessionOtherId.value)
             event.preventDefault();
-
-            console.log('> connect socket.io ');
             // envoi du 2ème id de la session
             ioSocket.emit("addPlayer", htmlPlayForm.sessionOtherId.value);
-
-            htmlGamesOverview.style.visibility = "visible";
-            htmlTracking.style.visibility = "visible";
-        })
+        });
 
         /*--------------------------------------------------*
         *    Affichage des listes envoyées par le serveur
         *---------------------------------------------------*/
 
         ioSocket.on('updateLists', function (lists, message) {
-            console.log('>updateLists', message);
-            // liste des parties 
-            htmlGamesList.innerHTML = '';
-            htmlRoomsList.innerHTML = '';
-            htmlConnections.innerHTML = '';
+            document.getElementById('game').style.visibility = 'visible';
+            htmlGameOverview.style.visibility = 'visible';
+            htmlPlayForm.removeEventListener('submit', function (event) {
+                event.preventDefault();
+            });
+            htmlGameIntro.style.display = 'none';
 
-            console.log('> gamesList ', lists.games);
+            // liste des parties 
+            htmlGamesList.innerHTML = 'Aucune partie.';
+            htmlRoomsList.innerHTML = 'Aucune salle.';
+            htmlConnections.innerHTML = 'Aucun joueur.';
+
             if (lists.games.length) {
                 updateGamesList(lists.games);
             }
 
             // Liste des salles ouvertes 
-            console.log('> roomsList ', roomsList);
             if (lists.rooms.length) {
                 updateRoomsList(lists.rooms);
                 // ajout d'un écouteur d'évént à chaque tag 'li' de classe 'clickable'
@@ -191,8 +176,7 @@ window.addEventListener("DOMContentLoaded", function () {
                 }
             }
 
-            // Liste des joueurs connectés                
-            console.log('> connections ', lists.connections, message);
+            // Liste des joueurs connectés  
             if (lists.connections.length) {
                 updateConnections(lists.connections);
             }
@@ -210,6 +194,7 @@ window.addEventListener("DOMContentLoaded", function () {
         // màj liste des connections envoyée par le serveur
         ioSocket.on("updateConnections", function (connections, message) {
             // à ajouter à la liste des joueurs connectés
+            htmlConnections.innerHTML = 'Aucune salle.';
             updateConnections(connections, message);
         });
 
@@ -290,14 +275,18 @@ window.addEventListener("DOMContentLoaded", function () {
 
         // Afficher la liste des salles envoyée par le serveur suite à une mise à jour
         ioSocket.on('updateRoomsList', function (roomsList) {
-            updateRoomsList(roomsList, this.id);
-            // Attacher un écouteur d'événements à l'élément 'li' contenant une salle clquable
-            var htmlClickableItems = document.querySelectorAll('.clickable')
-            for (var i = 0; htmlClickableItems[i]; i++) {
-                htmlClickableItems[i].addEventListener('click', function () {
-                    ioSocket.emit('joinRoom', this.id);
-                    htmlInitGameBtn.disabled = true;
-                });
+            console.loq('>updateRoomsList', roomsList)
+            htmlRoomsList.innerHTML = 'Aucune salle.';
+            if (lists.rooms.length) {
+                updateRoomsList(roomsList, this.id);
+                // Attacher un écouteur d'événements à l'élément 'li' contenant une salle cliquable
+                var htmlClickableItems = document.querySelectorAll('.clickable')
+                for (var i = 0; htmlClickableItems[i]; i++) {
+                    htmlClickableItems[i].addEventListener('click', function () {
+                        ioSocket.emit('joinRoom', this.id);
+                        htmlInitGameBtn.disabled = true;
+                    });
+                }
             }
         });
 

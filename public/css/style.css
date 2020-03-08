@@ -16,7 +16,7 @@ a {
   color: black;
 } */
 
-#register, #gamesOverview, #tracking, #gameRoom, #room, #quiz {
+#register, #game, #gameOverview,  #gameRoom, #room, #quiz {
   visibility: hidden;
 }
 

@@ -9,6 +9,19 @@ exports.shortDate = (date) => {
   return `${day}/${month}/${year}`;
 }
 
+exports.shortTime = (date) => {
+  date = new Date(date);
+  let hours = date.getHours();
+  let minutes = date.getMinutes();
+  let seconds = date.getSeconds();
+
+  hours = (hours < 10 ? "0" : "") + hours;
+  minutes = (minutes < 10 ? "0" : "") + minutes;
+  seconds = (seconds < 10 ? "0" : "") + seconds;
+  
+  return `${hours}:${minutes}:${seconds}`;
+}
+
 // dates en ms en arguments
 exports.duration = (startDate, endDate) => {
   let result = ``;
@@ -20,7 +33,7 @@ exports.duration = (startDate, endDate) => {
 
   if (days > 0) result += `${days}j `;
   if (hours > 0) result += `${hours}h `;
-  if (minutes > 0) result += `${minutes}mn `;
+  if (minutes > 0) result += `${minutes}m `;
   if (seconds > 0) result += `${seconds}s `;
 
   return result;
