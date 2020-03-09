@@ -26,6 +26,17 @@ exports.find = (parameters) => {
   });
 };
 
+exports.aggregate = (parameters) => {
+  console.log('>find : ', parameters)
+  connectDb((db, client) => {
+    const collection = db.collection(parameters.collectionName);
+    collection.aggregate(parameters.filter).toArray((err, data) => {      
+      client.close();
+      parameters.done(data, err);
+    });
+  });
+};
+
 exports.insert = (parameters) => {
   console.log('>insert : ', parameters)
   connectDb((db, client) => {

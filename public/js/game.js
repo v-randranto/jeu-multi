@@ -275,7 +275,7 @@ window.addEventListener("DOMContentLoaded", function () {
 
         // Afficher la liste des salles envoyée par le serveur suite à une mise à jour
         ioSocket.on('updateRoomsList', function (roomsList) {
-            console.loq('>updateRoomsList', roomsList)
+            console.log('>updateRoomsList', roomsList)
             htmlRoomsList.innerHTML = 'Aucune salle.';
             if (lists.rooms.length) {
                 updateRoomsList(roomsList, this.id);
@@ -320,7 +320,8 @@ window.addEventListener("DOMContentLoaded", function () {
         htmlAnswserForm.addEventListener("submit", function (event) {
             event.preventDefault();
             console.log('> answer submit ');
-            ioSocket.emit("answer", htmlAnswserForm.answer.value);
+            ioSocket.emit("answer", this.answer.value);
+            this.answer.value = '';
         });
 
         // Afficher le message du serveur dans la salle
@@ -329,8 +330,16 @@ window.addEventListener("DOMContentLoaded", function () {
         });
 
         // Afficher la réponse d'un joueur 
-        ioSocket.on('showPlayerAnswer', function (message) {
-            document.getElementById('msgAnswer').innerHTML = message;
+        ioSocket.on('showPlayerAnswer', function (message, status) {
+            
+            let answer = document.getElementById('msgAnswer');
+            answer.className = '';
+            answer.innerHTML = message;
+            if (status) {
+                answer.className = 'text-success';
+            } else {
+                answer.className = 'text-danger';
+            }
         });
 
         // Afficher le classement de la salle

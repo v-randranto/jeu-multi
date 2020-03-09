@@ -215,7 +215,8 @@ const lists = {
 const gameConfig = {
   nbMaxPlayers: 4,
   nbMinPlayers: 2,
-  nbMaxRounds: 5
+  nbMaxRounds: 5,
+  timeoutDelay: 1500
 }
 
 const messages = {  
@@ -269,19 +270,20 @@ const getRoomAsync = async function (rooms, roomName) {
   return room;
 }
 
+
 const getGames = async function () {
 
-  await Game.find().then(
+  await Game.find().sort({startDate: -1}).limit(10).then(
     (data) => {
 
       lists.games = [];
 
       if (data.length) {
         data.forEach(game => {
-          let trGame = `<tr><td>${tool.shortDate(game.startDate)}</td>`
-            + `<td>${tool.duration(game.startDate, game.endDate)}</td>`
-            + `<td>${game.nbRoundsPlayed} tours</td>`;
-
+          let trGame = `
+          <tr><td>${tool.shortDate(game.startDate)}</td>
+          <td>${tool.duration(game.startDate, game.endDate)}</td>
+          `;
           game.players.forEach(player => {
             trGame += `<td>${player.pseudo}: ${player.score} </td>`;
           })
@@ -295,6 +297,7 @@ const getGames = async function () {
 
   ).catch((e) => {
     console.log(e);
+    throw e;
   });
 }
 
@@ -306,6 +309,7 @@ const updateGames = async function (game) {
     ioServer.emit('updateLists', lists);
   }).catch((e) => {
     console.log(e);
+    throw e;
   });
 }
 /*============================================*
@@ -324,8 +328,9 @@ ioServer.on("connect", function (ioSocket) {
     // Récupérer les parties en base
     if (!lists.games.length) {
       getGames().then(() => {
-        // console.log('> getGames().then ', lists);
-        // ioSocket.emit('updateLists', lists);
+        console.log('> getGames()', lists);
+      }).catch((e) => {
+        console.error(e);
       });
     }
 
@@ -413,21 +418,21 @@ ioServer.on("connect", function (ioSocket) {
     ioServer.emit('updateLists', lists, message);
 
     // charger une sélection du dico dans la salle (provisoire) TODO 
-    dbQuery.find({
+
+    dbQuery.aggregate({
       collectionName: 'dictionnary',
-      filter: {},
-      sort: {},
-      limit: 0,
+      filter: [ { $sample: {size: 10} } ],
       done: (data, err) => {
         if (err) {
           //TODO service indisponible
-          console.log('> erreur chargement dico')
+          console.error(err);
         } else {
           if (data.length) {
             room.selectedWords = data;
+            console.log('dico', data);
           } else {
             //TODO service indisponible
-            console.log('> dico vide !!')
+            console.log('> dico vide !!');
           }
         }
 
@@ -500,7 +505,7 @@ ioServer.on("connect", function (ioSocket) {
     console.log(`> startGame chez ${ioSocket.player.pseudo}`);
 
     getRoomAsync(lists.rooms, ioSocket.player.roomName).then((room) => {
-
+      
       if (room.players.length < gameConfig.nbMinPlayers) {
         ioSocket.emit('msgRoom', messages.notEnoughPlayers);
         return;
@@ -515,7 +520,7 @@ ioServer.on("connect", function (ioSocket) {
 
       // Envoyer la 1ère question aux joueurs de la salle
       ioServer.in(room.name).emit('gameStarts', messages.gameStarts);
-
+      
       setTimeout(() => {
         console.log('definition en salle ', room);
         ioServer.in(room.name).emit('quiz', roomFct.manageRoom.sendWordDefinition(room))
@@ -549,7 +554,7 @@ ioServer.on("connect", function (ioSocket) {
       roomFct.manageRoom.updateScore(room.players, ioSocket.id);
       // Envoyer à tous les joueurs de la salle la bonne réponse trouvée et la mise à jour du score du joueur gagnant      
       const message = `${ioSocket.player.pseudo} dit <b>${answer.toUpperCase()}</b>: bonne réponse`;
-      ioServer.in(room.name).emit('showPlayerAnswer', message);
+      ioServer.in(room.name).emit('showPlayerAnswer', message, true);
       ioServer.in(room.name).emit('updateRoomPlayers', room.players);
 
       // fin de partie       
@@ -602,7 +607,7 @@ ioServer.on("connect", function (ioSocket) {
       *-------------------------------------------*/
       // Envoyer aux joueurs de la salle la réponse fournie
       const message = `${ioSocket.player.pseudo} dit <b>${answer.toUpperCase()}</b>: mauvaise réponse`;
-      ioServer.in(room.name).emit('showPlayerAnswer', message);
+      ioServer.in(room.name).emit('showPlayerAnswer', message, false);
     }
 
   });

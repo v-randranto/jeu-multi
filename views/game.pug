@@ -27,7 +27,8 @@ html(lang="en")
               .h4 Joueurs connectés 
               #connections.overflow-auto  
               .h4 Activité
-              #tracking.overflow-auto   
+              #tracking.overflow-auto  
+
             
             #gameOverview.col.p-3                            
               .h4 Salles de jeu en cours
@@ -48,7 +49,7 @@ html(lang="en")
                   p#msgAnswer           
                   form#answerForm
                       label Votre réponse 
-                      input.form-control(type="text", name="answer", onfocus="this.     value=''" )
+                      input.form-control(type="text", name="answer", onfocus="this.value=''" )
                       button.btn.btn-info.m-3.col-6(type="submit", class="") Envoyer
 
     script(src="/socket.io/socket.io.js")
