@@ -49,11 +49,7 @@ const manageRoom = {
         room.quizWord = room.selectedWords[room.nbRoundsPlayed - 1].word;
         room.quizDefinition = room.selectedWords[room.nbRoundsPlayed - 1].definition;
         // Envoyer la question à tous les joueurs de la salle
-        const quizMsg = {
-            word: `Tour n° ${room.nbRoundsPlayed} - Mot de ${room.quizWord.length} lettres.`,
-            definition: `Définition : ${room.quizDefinition}`
-        }
-        return quizMsg;
+        return `Tour ${room.nbRoundsPlayed}, ${room.quizWord.length} lettres :<br><i>${room.quizDefinition}</i>`;
     },
 
     updateScore: function (roomPlayers, socketId) {

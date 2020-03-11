@@ -91,31 +91,23 @@ var updateConnections = function (connections, message) {
 var updateRoomPlayers = function (roomPlayers) {
     // mise à jour de la salle à laquelle un joueur participe    
     htmlRoomPlayers.innerHTML = '';
+    htmlRow = document.createElement('tr');
+    htmlRoomPlayers.appendChild(htmlRow);
     for (var i = 0; roomPlayers[i]; i++) {
         var player = roomPlayers[i];
-        var htmlPlayer = document.createElement('p');
-        htmlPlayer.id = player.idSession;
-        htmlPlayer.classList.add('player');
-        htmlPlayer.innerHTML = `${player.pseudo} ${player.score} points.`;
-        htmlRoomPlayers.appendChild(htmlPlayer);
-    }
-    var htmlStartBtn = document.getElementById('startGameBtn');
-    // s'il y au moins 2 joueurs, le taulier peut cliquer sur le bouton 'démarrer'
-    if (htmlStartBtn) {
-        if (htmlStartBtn.disabled || roomPlayers.length >= 2) {
-            htmlStartBtn.disabled = false;
-        }
+        var htmlTd = document.createElement('td');
+        htmlRow.appendChild(htmlTd);
+        htmlTd.innerHTML += `${player.pseudo} ${player.score}pt`;
     }
 }
 
 var resetRoom = function () {
+    htmlRoom.style.visibility = 'hidden';
     htmlRoomPlayers.innerHTML = '';
     htmlRoomMsg.innerHTML = '';
     htmlQuiz.style.visibility = 'hidden';
     document.getElementById('word').innerHTML = '';
-    document.getElementById('definition').innerHTML = '';
     document.getElementById('msgAnswer').innerHTML = '';
-    htmlRoomButtons.style.visibility = 'hidden';
 }
 
 window.addEventListener("DOMContentLoaded", function () {
@@ -124,7 +116,10 @@ window.addEventListener("DOMContentLoaded", function () {
      * CONNEXION SOCKET.IO 
      * TODO: commentaires
      **********************************************************/
-    var ioSocket = io('http://localhost:8080', function () {
+
+    
+    //var ioSocket = io('http://localhost:8080', function () {
+    var ioSocket = io('https://jeu-multi-vra.herokuapp.com/', function () {
     });
 
     /*=============================================================*
@@ -132,7 +127,7 @@ window.addEventListener("DOMContentLoaded", function () {
      *=============================================================*/
 
     ioSocket.on("connect", function () {
-        
+
         htmlTracking.innerHTML = '';
         htmlPlayForm.addEventListener('submit', function (event) {
             event.preventDefault();
@@ -220,23 +215,21 @@ window.addEventListener("DOMContentLoaded", function () {
             document.getElementById('msgGames').innerHTML = message;
         });
 
-        // Afficher la salle créée/rejointe par le joueur
+        // Afficher la salle créée ou rejointe par le joueur
         ioSocket.on("displayRoom", function (room, create, message) {
             // si ouverture d'une salle
             console.log('htmlRoom.style.visibility ', htmlRoom.style.visibility)
             if (create || ioSocket.id !== room.socketId) {
                 htmlRoom.style.visibility = 'visible';
+                var htmlOwner = document.getElementById('owner');
                 var htmlStartBtn = document.getElementById('startGameBtn');
                 var htmlCloseBtn = document.getElementById('closeRoomBtn');
                 var htmlLeaveBtn = document.getElementById('leaveRoomBtn');
-                htmlStartBtn.disabled = true;
+                htmlOwner.innerHTML = 'Tripot de ' + room.name;
                 htmlRoomButtons.style.visibility = 'visible';
                 htmlStartBtn.style.display = 'none';
                 htmlCloseBtn.style.display = 'none';
                 htmlLeaveBtn.style.display = 'none';
-                console.log('ioSocket.id', ioSocket.id);
-                console.log('room.socketId', room.socketId);
-                console.log('btn styles ', htmlStartBtn.style, closeRoomBtn.style, leaveRoomBtn.style);
                 if (ioSocket.id === room.socketId) {
                     console.log('ioSocket.id === room.socketId');
                     htmlStartBtn.style.display = 'inline';
@@ -277,7 +270,7 @@ window.addEventListener("DOMContentLoaded", function () {
         ioSocket.on('updateRoomsList', function (roomsList) {
             console.log('>updateRoomsList', roomsList)
             htmlRoomsList.innerHTML = 'Aucune salle.';
-            if (lists.rooms.length) {
+            if (roomsList.length) {
                 updateRoomsList(roomsList, this.id);
                 // Attacher un écouteur d'événements à l'élément 'li' contenant une salle cliquable
                 var htmlClickableItems = document.querySelectorAll('.clickable')
@@ -299,9 +292,8 @@ window.addEventListener("DOMContentLoaded", function () {
         /*---------------------------------------------------*
          *    Gestion d'une partie
          *---------------------------------------------------*/
-        // Afficher la question envoyée par le seveur
+        // La partie démarre et le bouton 'démarrer' est désactivée
         ioSocket.on('gameStarts', function (message) {
-            console.log('> gameStarts ', message);
             document.getElementById('startGameBtn').disabled = true;
             htmlRoomMsg.innerHTML = message;
         });
@@ -309,11 +301,12 @@ window.addEventListener("DOMContentLoaded", function () {
         // Afficher la question envoyée par le seveur
         ioSocket.on('quiz', function (quizMsg) {
             htmlRoomMsg.innerHTML = '';
+            document.getElementById('msgAnswer').innerHTML = '';
+
             // affichage de la définition du mot 
             htmlQuiz.style.visibility = 'visible';
             console.log('> quiz ', quizMsg);
-            document.getElementById('word').innerHTML = quizMsg.word;
-            document.getElementById('definition').innerHTML = quizMsg.definition;
+            document.getElementById('word').innerHTML = quizMsg;
         });
 
         // Envoi de la réponse du joueur au serveur
@@ -331,15 +324,16 @@ window.addEventListener("DOMContentLoaded", function () {
 
         // Afficher la réponse d'un joueur 
         ioSocket.on('showPlayerAnswer', function (message, status) {
-            
-            let answer = document.getElementById('msgAnswer');
-            answer.className = '';
-            answer.innerHTML = message;
+
+            var previousAnswers = document.getElementById('msgAnswer').innerHTML;
+            let textStyle = '';
             if (status) {
-                answer.className = 'text-success';
+                textStyle = 'class="text-success"';
             } else {
-                answer.className = 'text-danger';
+                textStyle = 'class="text-danger"';
             }
+            document.getElementById('msgAnswer').innerHTML = `<span ${textStyle}>${message}</span> <br> ${previousAnswers}`;
+
         });
 
         // Afficher le classement de la salle

@@ -216,7 +216,7 @@ const gameConfig = {
   nbMaxPlayers: 4,
   nbMinPlayers: 2,
   nbMaxRounds: 5,
-  timeoutDelay: 1500
+  timeoutDelay: 2000
 }
 
 const messages = {  
