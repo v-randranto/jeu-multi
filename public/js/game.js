@@ -128,8 +128,8 @@ window.addEventListener("DOMContentLoaded", function () {
      **********************************************************/
 
     
-    var ioSocket = io('http://localhost:8080', function () {
-    //var ioSocket = io('https://jeu-multi-vra.herokuapp.com/', function ()
+    //var ioSocket = io('http://localhost:8080', function () {
+    var ioSocket = io('https://jeu-multi-vra.herokuapp.com/', function ()
     //var ioSocket = io('http://v-randranto.fr/', function () { 
     });
 
