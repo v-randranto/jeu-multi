@@ -353,6 +353,7 @@ ioServer.on("connect", function (ioSocket) {
             ioSocket.player = {
               idSession: sessionFound.otherId,
               pseudo: sessionFound.pseudo,
+              bgColor: '#'+(Math.random()*0xFFFFFF<<0).toString(16),
               score: 0
             };
             // ajout à la liste des connections
@@ -582,9 +583,9 @@ ioServer.on("connect", function (ioSocket) {
         // insertion en base de la partie puis clôture de la salle
         updateGames(game).then(() => {
           console.log('> updateGames().then ', lists);
-          setTimeout(function(){
+          setTimeout(() => {
             closeRoom(room, lists, message);
-          }, 2000);
+          }, 3000);
           
         }).catch((e) => {
           console.error(e);

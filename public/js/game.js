@@ -25,7 +25,14 @@ var nbTracks = 0;
 /*********************************************
  * FONCTIONS DE MISE A JOUR DES LISTES
  **********************************************/
-var updateTracking = function (message) {
+var getTextStyle = function (status) {
+    if (status) {
+        return 'class="text-success"';
+    } else {
+        return 'class="text-danger"';
+    }
+}
+ var updateTracking = function (message) {
     var previousTracks = htmlTracking.innerHTML;
     htmlTracking.innerHTML = `${message} <br> ${previousTracks}`;
 }
@@ -53,9 +60,10 @@ var updateRoomsList = function (roomsList, ioSocketId, message) {
     for (var i = 0; roomsList[i]; i++) {
         var room = roomsList[i];
         var htmlItem = document.createElement('li');
+        // salle accessible affichée en vert sinon rouge
         var status = room.accessible ? 'accessible' : 'verrouillée';
-        htmlItem.innerHTML = `Salle de ${room.name} ${status}`;
-        // Les salles accessibles sont cliquables mais un taulier ne doit pas pouvoir cliquer sa salle
+        htmlItem.innerHTML = `<span ${getTextStyle(room.accessible)}>Salle de ${room.name} ${status}</span>`;
+        // Les salles accessibles sont cliquables mais le taulier ne doit pas pouvoir cliquer sa salle
         if (room.accessible) {
             if (ioSocketId !== room.socketId) {
                 htmlItem.id = room.name;
@@ -79,8 +87,10 @@ var updateConnections = function (connections, message) {
     for (var i = 0; connections[i]; i++) {
         var player = connections[i].player;
         var htmlItem = document.createElement('li');
-        var status = player.roomName ? `dans la salle ${player.roomName}` : `libre`;
-        htmlItem.innerHTML = `<b>${player.pseudo}</b> ${status}`;
+        var status = !player.roomName ? `disponible.` : `dans la salle ${player.roomName}`;
+        htmlItem.className = 'list-group-item';        
+        bgColorStyle = `style="background-color: ${player.bgColor}"`
+        htmlItem.innerHTML = `<span class="avatar" ${bgColorStyle}></span><span ${getTextStyle(!player.roomName)}>${player.pseudo} ${status}</span>`;
         htmlList.appendChild(htmlItem);
     }
     if (message) {
@@ -118,8 +128,9 @@ window.addEventListener("DOMContentLoaded", function () {
      **********************************************************/
 
     
-    //var ioSocket = io('http://localhost:8080', function () {
-    var ioSocket = io('https://jeu-multi-vra.herokuapp.com/', function () {
+    var ioSocket = io('http://localhost:8080', function () {
+    //var ioSocket = io('https://jeu-multi-vra.herokuapp.com/', function ()
+    //var ioSocket = io('http://v-randranto.fr/', function () { 
     });
 
     /*=============================================================*
@@ -322,18 +333,11 @@ window.addEventListener("DOMContentLoaded", function () {
             htmlRoomMsg.innerHTML = message;
         });
 
-        // Afficher la réponse d'un joueur 
+        // Afficher la réponse d'un joueur (verte si correcte, rouge si incorrecte)
         ioSocket.on('showPlayerAnswer', function (message, status) {
 
             var previousAnswers = document.getElementById('msgAnswer').innerHTML;
-            let textStyle = '';
-            if (status) {
-                textStyle = 'class="text-success"';
-            } else {
-                textStyle = 'class="text-danger"';
-            }
-            document.getElementById('msgAnswer').innerHTML = `<span ${textStyle}>${message}</span> <br> ${previousAnswers}`;
-
+            document.getElementById('msgAnswer').innerHTML = `<span ${getTextStyle(status)}>${message}</span> <br> ${previousAnswers}`;
         });
 
         // Afficher le classement de la salle

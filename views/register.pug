@@ -13,13 +13,13 @@ html(lang="fr")
                 form(id="registerForm" action="/register", method="POST")
                     .form-group
                         label Pseudo
-                        input.form-control(type="text", name="pseudo"  value=pseudoValue, onfocus="this.value=''" required maxlength="20")
+                        input.form-control(type="text", name="pseudo"  value=pseudoValue, onfocus="this.value=''" required maxlength="15")
                     .form-group
                         label Mot de passe
-                        input.form-control(type="text", name="pwd",    onfocus="thivalue=''" required maxlength="10")
+                        input.form-control(type="password", name="pwd",    onfocus="this.value=''" required minlength="4" maxlength="8")
                     .form-group
                         label Confirmation mot de passe
-                        input.form-control(type="text", name="confirm" required)
+                        input.form-control(type="password", name="confirm" required)
                     button.btn.btn-info(type="submit") Validez
                     p.text-danger=msgError  
                 p.text-right.p-3  
