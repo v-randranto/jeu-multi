@@ -28,6 +28,7 @@ app.set('view engine', 'pug');
 
 const PORT = process.env.PORT || 8080;
 const dbUrl = `mongodb+srv://jeumulti:ifocop@cluster0-lfexs.mongodb.net/jeu-back`;
+//const dbUrl = `mongodb://localhost:27017/jeu-back`;
 /**
  *  Middlewares 
  */
@@ -216,10 +217,11 @@ const gameConfig = {
   nbMaxPlayers: 4,
   nbMinPlayers: 2,
   nbMaxRounds: 5,
-  timeoutDelay: 2000
+  definitionDelay: 2500,
+  closingDelay: 3500
 }
 
-const messages = {  
+const messages = {
   alreadyInRoom: 'Vous êtes déjà dans une salle.',
   bugDisconnect: '<b>Oups, la machine ne veut pas vous laisser partir!</b>',
   bugDico: '<b>Oups, y a un souci avec le dico!</b>',
@@ -229,11 +231,11 @@ const messages = {
   connect: ` s'est connecté.e.`,
   disconnect: ` s'est déconnecté.e.`,
   gameStarts: `<b>Et c'est parti!</b>`,
-  interruptedGame: `Partie abandonnée dans la salle de `,
-  joinedRoom: ` a rejoint la salle de `,
-  leftRoom: ` a quitté la salle de `,
+  interruptedGame: `Partie abandonnée dans la salle`,
+  joinedRoom: ` a rejoint la salle`,
+  leftRoom: ` a quitté la salle`,
   openRoom: ` a ouvert une salle.`,
-  startedRoom: `Partie démarrée dans la salle de `,
+  startedRoom: `Partie démarrée dans la salle`,
   maxPlayersReached: `Nombre de ${gameConfig.nbMaxPlayers} joueurs maximum atteint, vous pouvez démarrer la partie.`,
   notEnoughPlayers: `Il faut au moins ${gameConfig.nbMinPlayers} joueurs pour commencer à jouer.`,
   sessionNotFound: `Session non trouvée.`,
@@ -249,7 +251,8 @@ const reinitialisePlayers = function (players) {
 }
 
 const closeRoom = (room, lists, message) => {
-  ioServer.emit('tracking', message);
+  setTimeout(() => {
+    ioServer.emit('tracking', message);
     ioServer.in(room.name).emit('resetRoom');
     // libérer les joueurs et reinit score
     reinitialisePlayers(room.players);
@@ -258,6 +261,7 @@ const closeRoom = (room, lists, message) => {
     lists.rooms.splice(indexofRoom, 1);
     // envoi listes mises à jour
     ioServer.emit('updateLists', lists, message);
+  }, gameConfig.closingDelay);
 
 }
 
@@ -273,7 +277,7 @@ const getRoomAsync = async function (rooms, roomName) {
 
 const getGames = async function () {
 
-  await Game.find().sort({startDate: -1}).limit(10).then(
+  await Game.find().sort({ startDate: -1 }).limit(10).then(
     (data) => {
 
       lists.games = [];
@@ -318,7 +322,6 @@ const updateGames = async function (game) {
 
 ioServer.on("connect", function (ioSocket) {
 
-
   /*========================================================================*
   *         ...il veut jouer
   *========================================================================*/
@@ -353,7 +356,7 @@ ioServer.on("connect", function (ioSocket) {
             ioSocket.player = {
               idSession: sessionFound.otherId,
               pseudo: sessionFound.pseudo,
-              bgColor: '#'+(Math.random()*0xFFFFFF<<0).toString(16),
+              bgColor: '#' + (Math.random() * 0xFFFFFF << 0).toString(16),
               score: 0
             };
             // ajout à la liste des connections
@@ -422,7 +425,7 @@ ioServer.on("connect", function (ioSocket) {
 
     dbQuery.aggregate({
       collectionName: 'dictionnary',
-      filter: [ { $sample: {size: 10} } ],
+      filter: [{ $sample: { size: 10 } }],
       done: (data, err) => {
         if (err) {
           //TODO service indisponible
@@ -472,7 +475,7 @@ ioServer.on("connect", function (ioSocket) {
 
       ioServer.in(room.name).emit('displayRoom', room, false);
       // Envoyer à tous les joueurs connectés la liste des connexions suite à indisponibilité de ce joueur      
-      const message = `${tool.shortTime(Date.now())} <b>${ioSocket.player.pseudo}</b> ${messages.joinedRoom} ${roomName}.`;
+      const message = `${tool.shortTime(Date.now())} <b>${ioSocket.player.pseudo}</b> ${messages.joinedRoom} "${roomName}".`;
       ioServer.emit('updateConnections', lists.connections, message);
 
       // Le nombre de joueurs max dans une salle est atteinte
@@ -506,7 +509,7 @@ ioServer.on("connect", function (ioSocket) {
     console.log(`> startGame chez ${ioSocket.player.pseudo}`);
 
     getRoomAsync(lists.rooms, ioSocket.player.roomName).then((room) => {
-      
+
       if (room.players.length < gameConfig.nbMinPlayers) {
         ioSocket.emit('msgRoom', messages.notEnoughPlayers);
         return;
@@ -519,13 +522,12 @@ ioServer.on("connect", function (ioSocket) {
       const message = `${tool.shortTime(Date.now())} ${messages.startedRoom} <b>${ioSocket.player.pseudo}</b>.`;
       ioServer.emit('updateRoomsList', lists.rooms, message);
 
-      // Envoyer la 1ère question aux joueurs de la salle
+      // Informer les joueurs de la salle que la partie commence
       ioServer.in(room.name).emit('gameStarts', messages.gameStarts);
-      
+      // Envoyer la 1ère question aux joueurs de la salle
       setTimeout(() => {
-        console.log('definition en salle ', room);
         ioServer.in(room.name).emit('quiz', roomFct.manageRoom.sendWordDefinition(room))
-      }, gameConfig.timeoutDelay);
+      }, gameConfig.definitionDelay);
 
     }).catch((e) => {
       console.error(e);
@@ -583,10 +585,9 @@ ioServer.on("connect", function (ioSocket) {
         // insertion en base de la partie puis clôture de la salle
         updateGames(game).then(() => {
           console.log('> updateGames().then ', lists);
-          setTimeout(() => {
-            closeRoom(room, lists, message);
-          }, 3000);
-          
+
+          closeRoom(room, lists, message);
+
         }).catch((e) => {
           console.error(e);
           ioServer.emit('msgGames', messages.bugRoom);
@@ -598,7 +599,7 @@ ioServer.on("connect", function (ioSocket) {
         setTimeout(() => {
           console.log('nouvelle définition ', room);
           ioServer.in(room.name).emit('quiz', roomFct.manageRoom.sendWordDefinition(room))
-        }, gameConfig.timeoutDelay);
+        }, gameConfig.definitionDelay);
       }
 
     } else {
@@ -624,7 +625,9 @@ ioServer.on("connect", function (ioSocket) {
 
       delete (ioSocket.player.roomName);
       ioSocket.player.score = 0;
-      const message = `${tool.shortTime(Date.now())} <b>${ioSocket.player.pseudo}</b> ${messages.leftRoom} ${room.name}.`;
+      const msgPart1 = `${tool.shortTime(Date.now())}`;
+      const msgPart2 = `<b>${ioSocket.player.pseudo}</b> ${messages.leftRoom} "${room.name}".`
+      const message = msgPart1 + msgPart2;
       ioServer.emit('updateConnections', lists.connections, message);
 
       // retirer le joueur de la salle
@@ -632,19 +635,19 @@ ioServer.on("connect", function (ioSocket) {
       room.players.splice(indexofPlayer, 1);
 
       // envoyer demandes de réaffichage au client 
-      ioServer.in(room.name).emit('playerLeaveRoom', room.players, message);
+      ioServer.in(room.name).emit('playerLeaveRoom', room.players, msgPart2);
 
       // envoyer demande de ne plus afficher la salle pour le joueur
       ioSocket.leave(room.name);
       ioSocket.emit('resetRoom');
 
       // Fermeture de la salle s'il ne reste plus qu'un joueur sur une partie commencée
-      if (room.players.length === 1 && room.nbRoundsPlayed > 0) {        
+      if (room.players.length === 1 && room.nbRoundsPlayed > 0) {
         const message = `${tool.shortTime(Date.now())} ${messages.interruptedGame} <b>${ioSocket.player.pseudo}</b>.`;
         ioServer.in(room.name).emit('msgGames', message);
-        setTimeout(function(){
-          closeRoom(room, lists, message);
-        }, 2000);
+
+        closeRoom(room, lists, message);
+
       }
 
     }).catch((e) => {
@@ -680,19 +683,25 @@ ioServer.on("connect", function (ioSocket) {
 
   ioSocket.on("disconnect", function () {
     // TODO gérer selon le type de déconnexion
-    console.log('>disconnect');
+    console.log('>disconnect', ioSocket.player);
+    const message = `${tool.shortTime(Date.now())} <b>${ioSocket.player.pseudo}</b> ${messages.disconnect}`;
 
     //le joueur est dans une salle
     if (ioSocket.player.roomName) {
-
+      console.log('deconnexion joueur dans salle')
       getRoomAsync(lists.rooms, ioSocket.player.roomName).then((room) => {
+        console.log('salle', room)
+        const indexofConnection = roomFct.getIndexof.connection(lists.connections, ioSocket.player.connectId);
+        lists.connections.splice(indexofConnection, 1);
+        ioServer.emit('updateConnections', lists.connections, message);
 
         // il s'agit de sa salle
         if (room.socketId === ioSocket.id) {
+          console.log('c sa salle')
           const message = `${tool.shortTime(Date.now())} <b>${ioSocket.player.pseudo}</b> ${messages.disconnect}`;
           closeRoom(room, lists, message);
         } else {
-
+          console.log('c pas sa salle')
           // ce n'est pas sa salle, il faut l'en retirer
           const indexofPlayer = roomFct.getIndexof.player(room.players, ioSocket.player.pseudo);
           room.players.splice(indexofPlayer, 1);
@@ -713,6 +722,14 @@ ioServer.on("connect", function (ioSocket) {
         console.error(e);
         ioSocket.emit('msgGames', messages.bugDisconnect);
       });
+
+
+    } else {
+      console.log('deconnexion joueur dispo')
+      const indexofConnection = roomFct.getIndexof.connection(lists.connections, ioSocket.player.connectId);
+      lists.connections.splice(indexofConnection, 1);
+      
+      ioServer.emit('updateConnections', lists.connections, message);
     }
 
   });
