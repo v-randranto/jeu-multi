@@ -218,7 +218,7 @@ const gameConfig = {
   nbMinPlayers: 2,
   nbMaxRounds: 5,
   definitionDelay: 2500,
-  closingDelay: 3500
+  closingDelay: 3000
 }
 
 const messages = {
@@ -228,15 +228,16 @@ const messages = {
   bugGames: '<b>Oups, la liste des parties est indisponible!</b>',
   bugRoom: '<b>Oups, y a un souci avec la salle!</b>',
   closingRoom: ` ferme sa salle.`,
-  connect: ` s'est connecté.e.`,
-  disconnect: ` s'est déconnecté.e.`,
+  connect: ` est connecté.e.`,
+  disconnect: ` est déconnecté.e.`,
   gameStarts: `<b>Et c'est parti!</b>`,
-  interruptedGame: `Partie abandonnée dans la salle`,
+  interruptedGame1: `Partie abandonnée dans la salle`,
+  interruptedGame2: `La salle ferme faute de joueurs.`,
   joinedRoom: ` a rejoint la salle`,
   leftRoom: ` a quitté la salle`,
   openRoom: ` a ouvert une salle.`,
   startedRoom: `Partie démarrée dans la salle`,
-  maxPlayersReached: `Nombre de ${gameConfig.nbMaxPlayers} joueurs maximum atteint, vous pouvez démarrer la partie.`,
+  maxPlayersReached: `Il y a ${gameConfig.nbMaxPlayers} joueurs, tu peux démarrer la partie.`,
   notEnoughPlayers: `Il faut au moins ${gameConfig.nbMinPlayers} joueurs pour commencer à jouer.`,
   sessionNotFound: `Session non trouvée.`,
   winner: ` est un.e <b>WINNER</b>!`
@@ -252,7 +253,6 @@ const reinitialisePlayers = function (players) {
 
 const closeRoom = (room, lists, message) => {
   setTimeout(() => {
-    ioServer.emit('tracking', message);
     ioServer.in(room.name).emit('resetRoom');
     // libérer les joueurs et reinit score
     reinitialisePlayers(room.players);
@@ -688,7 +688,6 @@ ioServer.on("connect", function (ioSocket) {
 
     //le joueur est dans une salle
     if (ioSocket.player.roomName) {
-      console.log('deconnexion joueur dans salle')
       getRoomAsync(lists.rooms, ioSocket.player.roomName).then((room) => {
         console.log('salle', room)
         const indexofConnection = roomFct.getIndexof.connection(lists.connections, ioSocket.player.connectId);
@@ -697,24 +696,23 @@ ioServer.on("connect", function (ioSocket) {
 
         // il s'agit de sa salle
         if (room.socketId === ioSocket.id) {
-          console.log('c sa salle')
-          const message = `${tool.shortTime(Date.now())} <b>${ioSocket.player.pseudo}</b> ${messages.disconnect}`;
+          const message = `${tool.shortTime(Date.now())} <b>${ioSocket.player.pseudo}</b> ${messages.closingRoom}`;
           closeRoom(room, lists, message);
         } else {
-          console.log('c pas sa salle')
           // ce n'est pas sa salle, il faut l'en retirer
           const indexofPlayer = roomFct.getIndexof.player(room.players, ioSocket.player.pseudo);
           room.players.splice(indexofPlayer, 1);
 
           // envoyer demandes de réaffichage au client             
-          const message = `${tool.shortTime(Date.now())} <b>${ioSocket.player.pseudo}</b> ${messages.leftRoom} ${room.name}.`;
+          const message = `<b>${ioSocket.player.pseudo}</b> ${messages.leftRoom}.`;
           ioServer.in(room.name).emit('playerLeaveRoom', room.players, message);
 
           // Fermeture de la salle s'il ne reste plus qu'un joueur sur une partie commencée
           if (room.players.length === 1 && room.nbRoundsPlayed > 0) {
-            const message = `${tool.shortTime(Date.now())} ${messages.interruptedGame} <b>${ioSocket.player.pseudo}</b>.`;
-            ioServer.in(room.name).emit('msgGames', message);
-            closeRoom(room, lists, message);
+            const message1 = `${tool.shortTime(Date.now())} ${messages.interruptedGame1} <b>${ioSocket.player.pseudo}</b>.`;
+            ioServer.in(room.name).emit('msgGames', message1);
+            const message2 = `${messages.interruptedGame2}`;
+            closeRoom(room, lists, message2);
           }
         }
 
@@ -727,8 +725,7 @@ ioServer.on("connect", function (ioSocket) {
     } else {
       console.log('deconnexion joueur dispo')
       const indexofConnection = roomFct.getIndexof.connection(lists.connections, ioSocket.player.connectId);
-      lists.connections.splice(indexofConnection, 1);
-      
+      lists.connections.splice(indexofConnection, 1);      
       ioServer.emit('updateConnections', lists.connections, message);
     }
 

@@ -1,28 +1,7 @@
 nav.fixed-top.navbar.navbar-dark.bg-dark
   .container-fluid
     .navbar-header
-      a.navbar-brand(href='#') Projet back - Jeu multi-joueurs
-    .collapse.navbar-collapse
-      a.navbar-brand(href='#') QUIZ
+      a.navbar-brand(href='#') Bienvenue #{pseudo} sur le quiz
     .nav.navbar-nav.navbar-right
-      span.text-white #{pseudo}
       form#logoutForm.form-inline.my-2.my-lg-0(action='/logout', method='POST')
         button.btn.btn-outline-success.my-2.my-sm-0(type='submit') Se déconnecter
-
-
-//- <nav class="fixed-top navbar navbar-dark bg-dark">
-//-   <div class="container-fluid">
-//-     <div class="navbar-header">
-//-       <a class="navbar-brand" href="#">Projet back - Jeu multi-joueurs</a>
-//-     </div>
-//-     <div class="collapse navbar-collapse">
-//-     <a class="navbar-brand" href="#">QUIZ</a>
-//-     </div>
-//-     <div class="nav navbar-nav navbar-right">
-//-     <form id="logoutForm" class="form-inline my-2 my-lg-0" action="/logout", method="POST">      
-//-       <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Se déconnecter</button>
-//-     </form>
-//-     </div>
-//-   </div>
-//-   </div>
-//- </nav>

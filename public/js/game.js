@@ -136,8 +136,8 @@ window.addEventListener("DOMContentLoaded", function () {
      * TODO: commentaires
      **********************************************************/
    
-    var ioSocket = io('http://localhost:8080', function () {
-    // var ioSocket = io('https://jeu-multi-vra.herokuapp.com/', function () {
+    // var ioSocket = io('http://localhost:8080', function () {
+    var ioSocket = io('https://jeu-multi-vra.herokuapp.com/', function () {
     // var ioSocket = io('http://v-randranto.fr/', function () { 
     });
 
@@ -250,7 +250,7 @@ window.addEventListener("DOMContentLoaded", function () {
                 var htmlStartBtn = document.getElementById('startGameBtn');
                 var htmlCloseBtn = document.getElementById('closeRoomBtn');
                 var htmlLeaveBtn = document.getElementById('leaveRoomBtn');
-                htmlOwner.innerHTML = 'Tripot de ' + room.name;
+                htmlOwner.innerHTML = `Salle ${room.name}`;
                 htmlRoomButtons.style.visibility = 'visible';
                 htmlStartBtn.style.display = 'none';
                 htmlCloseBtn.style.display = 'none';
