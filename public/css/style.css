@@ -1,4 +1,7 @@
-#register, #game, #gameOverview,  #gameRoom, #room, #quiz {
+#login, #register {
+  background-color: antiquewhite;
+}
+#game, #gameOverview,  #gameRoom, #room, #quiz {
   visibility: hidden;
 }
 
@@ -11,16 +14,28 @@
   overflow: auto;
   height: 120px;
 }
+#msgAnswer {
+  overflow: auto;
+  height: 100px;
+}
+
+#divGames, #room, #connections, #tracking, #roomsList {
+  background-color: antiquewhite;
+  color: black;
+}
 
 .clickable {
   cursor: pointer;
 }
 
 .avatar {
-  border-radius: 50%;
-  width: 10px;
-  height: 10px
+  display: 'inline-block';
+   width: 12px;
+   height: 12px;
+   border-radius: 50%;
+   margin-right: 5px;  
 }
+
 td {
   padding: 7px;
 }

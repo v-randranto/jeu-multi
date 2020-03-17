@@ -4,19 +4,19 @@ html(lang="en")
         meta(charset="UTF-8")
         meta(name='viewport', content='width=device-width, initial-scale=1, shrink-to-fit=no')
         title Jeu
-        link(rel="stylesheet", href="css/style.css")
         link(rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous")  
         link(rel="stylesheet", href="css/style.css") 
 
-    body
+    body.bg-secondary.text-white
       include includes/navbar.pug       
 
       #gameIntro.row.justify-content-center.m-5
         div.col-8
           - var sessionOtherId = otherId
-          .jumbotron
+          .jumbotron.text-dark
             .h4 Bonjour #{pseudo}!            
-            p.lead.text-justify.mt-3 Ton anglais technique déchire ? Teste-le avec un quiz contre d'autres joueurs. Le premier qui trouve le mot répondant à la définition proposée marque 1 point. Et qui c'est-qui gagne ? Celui qui a le plus de points après 10 tours.
+            p.lead.text-justify.mt-3 Ton anglais technique déchire ? Teste-le avec un quiz contre d'autres joueurs. Le premier qui trouve le mot répondant à la définition proposée marque 1 point. 
+            p.lead.text-justify.mt-3 Et qui c'est-qui gagne ? Celui qui a le plus de points après 5 tours (10 dans une partie avec plus de 2 joueurs).
             form(id="playForm" method="POST")
               input.invisible(type="text", name="sessionOtherId", id="sessionOtherId" value=sessionOtherId) 
               button.btn.btn-info.mt-3(type="submit") On y va? 
@@ -39,21 +39,23 @@ html(lang="en")
             #roomsList.border.border-info.rounded-lg.p-3
           button.btn.btn-success.m-3(id="initGameBtn") Initier une partie
           p.text-muted Initie une partie (cela crée une salle) ou rejoins une salle accessible en cliquant dessus
-          #room.border.border-info.rounded-lg.p-3
-            h4#owner  
-            table#roomPlayers.mt-3
-            p#msgRoom 
-            #roomButtons    
-                button.btn.btn-success.m-3(type="submit", id="startGameBtn") Démarrer la partie
-                button.btn.btn-warning.m-3(type="submit", id="closeRoomBtn") Fermer la salle
-                button.btn.btn-warning.m-3(type="submit", id="leaveRoomBtn") Quitter la salle                     
-            #quiz
-              p#word
-              p#msgAnswer           
-              form#answerForm.form-inline
-                  label Votre réponse 
-                  input.form-control.mt-3.col-sm-3(type="text", name="answer" onfocus="this.value=''" )
-                  button.btn.btn-outline-info.mt-3.col-sm-3(type="submit") Envoyer
+          .h4#owner
+          .col
+            #room.border.border-info.rounded-lg.p-3 
+              #roomButtons  
+                  button.btn.btn-success.mx-3(type="submit", id="startGameBtn")   Démarrer
+                  button.btn.btn-warning.mx-3(type="submit", id="closeRoomBtn") Fermer
+                  button.btn.btn-warning.mx-3(type="submit", id="leaveRoomBtn")   Quitter            
+              table#roomPlayers.mt-3
+              p#msgRoom 
+
+              #quiz
+                p#word.mt-3                        
+                form#answerForm.form-inline
+                    label Ta réponse 
+                    input.form-control.mx-3.col-sm-3(type="text", name="answer"   onfocus="this.value=''" required)
+                    button.btn.btn-info.mx-3.col-sm-3(type="submit") Envoyer
+                p#msgAnswer   
     script(src="/socket.io/socket.io.js")
     script(src="../js/game.js")
     script(src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.slim.min.js"

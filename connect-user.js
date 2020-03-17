@@ -6,56 +6,61 @@ const uuidv4 = require('uuid/v4');
 const sessionInfos = function (parameters) {
   parameters.session.pseudo = parameters.body.pseudo;
   parameters.session.otherId = uuidv4();
-  console.log("exports : req session uuid ", parameters.session.otherId);
-   parameters.interpolations.otherId = parameters.session.otherId;
+  parameters.interpolations.otherId = parameters.session.otherId;
 }
 
 exports.connect = function (parameters) {
   parameters.interpolations.pseudo = parameters.body.pseudo;
   const result = {};
-  if (!parameters.body.pseudo || !parameters.body.pwd) {
-    console.log('> pseudo ou pwd non renseignés', parameters.body);
+  let { pseudo, pwd, confirm } = parameters.body;
+  
+  if (!pseudo || !pwd) {
     parameters.interpolations.msgError = 'Oups, saisie incomplète';
     result.validCredentials = false;
     parameters.done(result);
     return;
   }
-  if (!parameters.login && !parameters.body.confirm) {
-    console.log('> pwd non renseigné', parameters.body);
+  if (pseudo.length < 3 || pseudo.length > 15 || pwd.length < 4 || pwd.length > 8) {
+    console.log("pseuo - pwd", pseudo, pwd)
+    parameters.interpolations.msgError = `
+    Pseudo de 3 à 15 caractères / 
+    Mot de passe de 4 à 8 caractères`;
+    result.validCredentials = false;
+    parameters.done(result);
+    return;
+  }  
+
+  if (!parameters.login && !confirm) {
     parameters.interpolations.msgError = 'Oups, saisie incomplète';
     result.validCredentials = false;
     parameters.done(result);
   }
   if (parameters.session.pseudo) {
     result.alreadyConnected = true;
-    console.log('> exports : session existante pour ', parameters.session.pseudo);
     parameters.done(result);
     return;
   }
 
-  console.log('> exports : pas de session en cours ')
   // accès DB pour rechercher le pseudo dans la collection 'users'  
   dbQuery.find({
     collectionName: 'users',
-    filter: { pseudo: parameters.body.pseudo },
+    filter: { pseudo: pseudo },
     sort: {},
     limit: 0,
     done: (data, err) => {
       // si trouvé contrôle du mot de passe
       // si mot de passe ok alors création d'une session et envoi de la page game 
       // TODO Code de test à supprimer
+      result.validCredentials = false;
       let userFound;
       if (data.length) {
         userFound = data[0];
-      }
-      result.validCredentials = false;
+      }      
 
       // cas d'un login
       if (parameters.login) {
-        console.log('> exports : login');
         if (userFound) {
           if (userFound.pwd === parameters.body.pwd) {
-            console.log('> login : identifiants OK');
             // mise en session d'infos utilisateur
             sessionInfos(parameters);
             result.validCredentials = true;
@@ -64,31 +69,27 @@ exports.connect = function (parameters) {
           }
 
         }
-        console.log('> login : identifiants KO');
         parameters.interpolations.msgError = 'Oups, identifiants incorrects.';
         parameters.done(result);
         return;
       }
 
       // cas d'un register
-      console.log('> exports : register');
       if (userFound) {
-        console.log('> register : pseudo déjà pris');
         parameters.interpolations.msgError = 'Oups, pseudo déjà utilisé.';
         parameters.done(result);
         return;
       }
 
-      if (parameters.body.pwd === parameters.body.confirm) {
-        console.log('> register : identifiants OK');
+      if (pwd === confirm) {
         result.validCredentials = true;
 
         // mise en session d'infos utilisateur
         sessionInfos(parameters);
         // insertion nouvel utilisateur en base
         const user = {
-          pseudo: parameters.body.pseudo,
-          pwd: parameters.body.pwd,
+          pseudo: pseudo,
+          pwd: pwd,
           creationDate: Date.now()
         };
 
@@ -97,19 +98,19 @@ exports.connect = function (parameters) {
           document: user,
           done: (resultOK, err) => {
             if (resultOK == '1') {
-              console.log('insertion user OK');
+              result.insertSession = true;
             } else {
-              console.log('erreur insertion user');
-              //todo gestion erreur fatale
+              console.error(err);
+              result.insertSession = false;
+              parameters.interpolations.msgError = 'Hou la la, ti souci avec ta session!';
             }
             parameters.done(result);
           }
-          
+
         });
         return;
       }
 
-      console.log('> register : identifiants KO');
       parameters.interpolations.msgError = 'Oups, mot de passe et confirmation différents';
       parameters.done(result);
     }

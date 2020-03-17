@@ -5,37 +5,46 @@
 
 var htmlLogoutForm = document.getElementById('logoutForm');
 
+// page introduction au jeu
 var htmlGameIntro = document.getElementById('gameIntro');
 var htmlPlayForm = document.getElementById('playForm');
 
-var htmlGameOverview = document.getElementById('gameOverview');
+// affichage des listes parties, salles, joueurs connectés, traces d'activité
 var htmlGamesList = document.getElementById('gamesList');
 var htmlRoomsList = document.getElementById('roomsList');
 var htmlConnections = document.getElementById('connections');
+var htmlTracking = document.getElementById('tracking');
 
+// bouton pour créer une partie
 var htmlInitGameBtn = document.getElementById('initGameBtn');
 
+// élements d'une salle en cours: joueurs, boutons d'action, 
+var htmlGameOverview = document.getElementById('gameOverview');
 var htmlRoom = document.getElementById('room');
 var htmlRoomPlayers = document.getElementById('roomPlayers');
 var htmlRoomButtons = document.getElementById('roomButtons');
 var htmlRoomMsg = document.getElementById('msgRoom');
 var htmlQuiz = document.getElementById('quiz');
 var htmlAnswserForm = document.getElementById('answerForm');
-var htmlTracking = document.getElementById('tracking');
-var nbTracks = 0;
 
 
 /*********************************************
  * FONCTIONS DE MISE A JOUR DES LISTES
  **********************************************/
 var getTextStyle = function (status) {
-    if (status) {
-        return 'class="text-success"';
+    if (status === null) {
+        return 'class="text-info"'
     } else {
-        return 'class="text-danger"';
+
+        if (status) {
+            return 'class="text-success"';
+        } else {
+            return 'class="text-danger"';
+        }
     }
 }
- var updateTracking = function (message) {
+
+var updateTracking = function (message) {
     var previousTracks = htmlTracking.innerHTML;
     htmlTracking.innerHTML = `${message} <br> ${previousTracks}`;
 }
@@ -85,12 +94,13 @@ var updateConnections = function (connections, message) {
     // mise à jour de la liste des joueurs connectés
     htmlConnections.innerHTML = '';
     var htmlList = document.createElement('ul');
+    htmlList.style.listStyleType = 'none';
     htmlConnections.appendChild(htmlList);
     for (var i = 0; connections[i]; i++) {
         var player = connections[i].player;
         var htmlItem = document.createElement('li');
         // Joueur dispo affiché en vert sinon rouge
-        var status = !player.roomName ? `disponible.` : `dans la salle ${player.roomName}`;        
+        var status = !player.roomName ? `disponible.` : `dans la salle ${player.roomName}`;
         bgColorStyle = `style="background-color: ${player.bgColor}"`
         htmlItem.innerHTML = `<span class="avatar" ${bgColorStyle}></span><span ${getTextStyle(!player.roomName)}>${player.pseudo} ${status}</span>`;
         htmlList.appendChild(htmlItem);
@@ -106,12 +116,12 @@ var updateRoomPlayers = function (roomPlayers) {
     htmlRow = document.createElement('tr');
     htmlRoomPlayers.appendChild(htmlRow);
     var lg = roomPlayers.length;
-    for (var i = 0; i<5; i++) {
+    for (var i = 0; i < 5; i++) {
         if (i < lg) {
-        var player = roomPlayers[i];
-        var htmlTd = document.createElement('td');
-        htmlRow.appendChild(htmlTd);
-        htmlTd.innerHTML = `${player.pseudo}: ${player.score}`;
+            var player = roomPlayers[i];
+            var htmlTd = document.createElement('td');
+            htmlRow.appendChild(htmlTd);
+            htmlTd.innerHTML = `${player.pseudo}: ${player.score}`;
         } else {
             var htmlTd = document.createElement('td');
             htmlTd.innerHTML = '';
@@ -120,11 +130,13 @@ var updateRoomPlayers = function (roomPlayers) {
 }
 
 var resetRoom = function () {
+    htmlInitGameBtn.disabled = false;
     htmlRoom.style.visibility = 'hidden';
     htmlRoomPlayers.innerHTML = '';
     htmlRoomMsg.innerHTML = '';
     htmlRoomButtons.style.visibility = 'hidden';
     htmlQuiz.style.visibility = 'hidden';
+    document.getElementById('owner').innerHTML = '';
     document.getElementById('word').innerHTML = '';
     document.getElementById('msgAnswer').innerHTML = '';
 }
@@ -135,10 +147,9 @@ window.addEventListener("DOMContentLoaded", function () {
      * CONNEXION SOCKET.IO 
      * TODO: commentaires
      **********************************************************/
-   
-    // var ioSocket = io('http://localhost:8080', function () {
+
     var ioSocket = io('https://jeu-multi-vra.herokuapp.com/', function () {
-    // var ioSocket = io('http://v-randranto.fr/', function () { 
+    //var ioSocket = io('localhost:8080/', function () {
     });
 
     /*=============================================================*
@@ -236,13 +247,12 @@ window.addEventListener("DOMContentLoaded", function () {
         });
 
         ioSocket.on("msgGames", function (message) {
-            //htmlInitGameBtn.disabled = false;
             document.getElementById('msgGames').innerHTML = message;
         });
 
-        // Afficher la salle créée ou rejointe par le joueur
+        // Afficher une salle
         ioSocket.on("displayRoom", function (room, create, message) {
-            // si ouverture d'une salle
+            
             console.log('htmlRoom.style.visibility ', htmlRoom.style.visibility)
             if (create || ioSocket.id !== room.socketId) {
                 htmlRoom.style.visibility = 'visible';
@@ -258,6 +268,7 @@ window.addEventListener("DOMContentLoaded", function () {
                 if (ioSocket.id === room.socketId) {
                     console.log('ioSocket.id === room.socketId');
                     htmlStartBtn.style.display = 'inline';
+                    htmlStartBtn.disabled = false;
                     htmlStartBtn.addEventListener('click', function () {
                         ioSocket.emit('startGame');
                     });
@@ -280,12 +291,11 @@ window.addEventListener("DOMContentLoaded", function () {
             updateRoomPlayers(room.players);
         });
 
-        ioSocket.on("resetRoom", function () {
-            htmlInitGameBtn.disabled = false;
+        ioSocket.on('resetRoom', function () {            
             resetRoom();
         });
 
-        ioSocket.on("playerLeaveRoom", function (roomPlayers, message) {
+        ioSocket.on('playerLeaveRoom', function (roomPlayers, message) {
             htmlInitGameBtn.disabled = false;
             htmlRoomMsg.innerHTML = message;
             updateRoomPlayers(roomPlayers);
@@ -330,14 +340,12 @@ window.addEventListener("DOMContentLoaded", function () {
 
             // affichage de la définition du mot 
             htmlQuiz.style.visibility = 'visible';
-            console.log('> quiz ', quizMsg);
             document.getElementById('word').innerHTML = quizMsg;
         });
 
         // Envoi de la réponse du joueur au serveur
         htmlAnswserForm.addEventListener("submit", function (event) {
             event.preventDefault();
-            console.log('> answer submit ');
             ioSocket.emit("answer", this.answer.value);
             this.answer.value = '';
         });
@@ -354,9 +362,14 @@ window.addEventListener("DOMContentLoaded", function () {
             document.getElementById('msgAnswer').innerHTML = `<span ${getTextStyle(status)}>${message}</span> <br> ${previousAnswers}`;
         });
 
+        // Personne n'a trouvé la réponse 
+        ioSocket.on('timesup', function () {
+            console.log('> timesup ');
+            ioSocket.emit('answer', '*timesup*'); // ok, j'admets, c'est de la bricole
+        });
+
         // Afficher le classement de la salle
         ioSocket.on('ranking', function (roomPlayers) {
-            console.log('> ranking ');
             displayRanking(roomPlayers);
         });
 

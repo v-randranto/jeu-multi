@@ -45,11 +45,12 @@ const manageRoom = {
     },
 
     sendWordDefinition: function (room) {
-        room.nbRoundsPlayed++;
+        room.nbRoundsPlayed++; 
+        room.attempts = 0;
         room.quizWord = room.selectedWords[room.nbRoundsPlayed - 1].word;
         room.quizDefinition = room.selectedWords[room.nbRoundsPlayed - 1].definition;
         // Envoyer la question à tous les joueurs de la salle
-        return `Tour ${room.nbRoundsPlayed}, ${room.quizWord.length} lettres :<br><i>${room.quizDefinition}</i>`;
+        return `<b>Tour ${room.nbRoundsPlayed} / 10 - ${room.quizWord.length} lettres : <i>${room.quizDefinition}</i></b>`;
     },
 
     updateScore: function (roomPlayers, socketId) {

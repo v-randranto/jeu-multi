@@ -2,23 +2,23 @@
 html(lang="fr")
     head
         meta(charset="UTF-8")
-        title Se connecter 
-        link(rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous")  
+        title Se connecter          
         link(rel="stylesheet", href="css/style.css") 
+        link(rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous") 
         
-    body            
+    body.bg-secondary            
         - var pseudoValue = '';
         - if (pseudo) pseudoValue = pseudo;
         .container
             
-            div(id="login" class="offset-sm-3 col-sm-6 offset-md-4 col-md-4 p-3")
+            #login.border.border-info.offset-sm-3.col-sm-6.offset-md-4.col-md-4.p-3
                 form(id="loginForm" action="/login", method="POST")
                     .form-group
                         label Pseudo 
-                        input.form-control(type="text", name="pseudo"  value=pseudoValue, onfocus="this.value=''" required maxlength="20")
+                        input.form-control(type="text", name="pseudo"  value=pseudoValue, onfocus="this.value=''", required, minlength=3, maxlength=15)
                     .form-group
                         label Mot de passe 
-                        input.form-control(type="password", name="pwd",    onfocus="this.value=''" required maxlength="10")
+                        input.form-control(type="password", name="pwd",    onfocus="this.value=''", required, minlength=4, maxlength=8)
 
                     button.btn.btn-info(type="submit") Validez
                     p.text-danger=msgError 
