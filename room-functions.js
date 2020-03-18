@@ -46,7 +46,7 @@ const manageRoom = {
 
     sendWordDefinition: function (room) {
         room.nbRoundsPlayed++; 
-        room.attempts = 0;
+        room.nbAttempts = 0;
         room.quizWord = room.selectedWords[room.nbRoundsPlayed - 1].word;
         room.quizDefinition = room.selectedWords[room.nbRoundsPlayed - 1].definition;
         // Envoyer la question à tous les joueurs de la salle

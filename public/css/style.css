@@ -1,7 +1,13 @@
-#login, #register {
+#login,
+#register {
   background-color: antiquewhite;
 }
-#game, #gameOverview,  #gameRoom, #room, #quiz {
+
+#game,
+#gameOverview,
+#gameRoom,
+#room,
+#quiz {
   visibility: hidden;
 }
 
@@ -10,16 +16,23 @@
   height: 180px;
 }
 
-#connections, #tracking, #roomsList {
+#connections,
+#tracking,
+#roomsList {
   overflow: auto;
   height: 120px;
 }
+
 #msgAnswer {
   overflow: auto;
   height: 100px;
 }
 
-#divGames, #room, #connections, #tracking, #roomsList {
+#divGames,
+#room,
+#connections,
+#tracking,
+#roomsList {
   background-color: antiquewhite;
   color: black;
 }
@@ -29,14 +42,14 @@
 }
 
 .avatar {
-  display: 'inline-block';
-   width: 12px;
-   height: 12px;
-   border-radius: 50%;
-   margin-right: 5px;  
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 1px solid black;
+  border-radius: 50%;
+  margin-right: 5px;
 }
 
 td {
   padding: 7px;
 }
-
