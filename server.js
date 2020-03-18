@@ -186,7 +186,7 @@ const HTTPServer = app.listen(PORT, function () {
   console.log("Express HTTP Server listening " + PORT);
 });
 
-process.on('uncaughtException', function(e) {
+process.on('uncaughtException', function (e) {
   console.error('Erreur non gérée', e)
 })
 
@@ -519,7 +519,7 @@ ioServer.on("connect", function (ioSocket) {
 
       room.startDate = Date.now();
       room.accessible = false;
-                                                       
+
       room.nbMaxAttempts = gameConfig.nbMaxAttempts * room.players.length;
       console.log('max essais', room.nbMaxAttempts);
 
@@ -548,7 +548,7 @@ ioServer.on("connect", function (ioSocket) {
 
   ioSocket.on("answer", function (answer) {
     // Rechercher la salle du joueur
-    
+
     let room = roomFct.manageRoom.getRoom(lists.rooms, ioSocket.player.roomName);
     room.nbAttempts++;
     const rightAnswer = answer.toUpperCase() === room.quizWord.toUpperCase();
@@ -698,12 +698,13 @@ ioServer.on("connect", function (ioSocket) {
 
     const message = `${tool.shortTime(Date.now())} <b>${ioSocket.player.pseudo}</b> ${messages.disconnect}`;
 
+    const indexofConnection = roomFct.getIndexof.connection(lists.connections, ioSocket.player.connectId);
+    lists.connections.splice(indexofConnection, 1);
+    ioServer.emit('updateConnections', lists.connections, message, ioSocket.player);
+
     //le joueur est dans une salle
     if (ioSocket.player.roomName) {
       getRoomAsync(lists.rooms, ioSocket.player.roomName).then((room) => {
-        const indexofConnection = roomFct.getIndexof.connection(lists.connections, ioSocket.player.connectId);
-        lists.connections.splice(indexofConnection, 1);
-        ioServer.emit('updateConnections', lists.connections, message, ioSocket.player);
 
         // il s'agit de sa salle
         if (room.socketId === ioSocket.id) {
@@ -733,12 +734,8 @@ ioServer.on("connect", function (ioSocket) {
         ioSocket.emit('msgGames', messages.bugDisconnect);
       });
 
-    } else {
-      const indexofConnection = roomFct.getIndexof.connection(lists.connections, ioSocket.player.connectId);
-      lists.connections.splice(indexofConnection, 1);
-      ioServer.emit('updateConnections', lists.connections, message, ioSocket.player);
     }
-
+    
   });
 
 });
