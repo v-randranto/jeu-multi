@@ -28,6 +28,7 @@ app.use('/js',express.static(__dirname + '/public/js'));
 const PORT = process.env.PORT || 3000;
 const dbUrl = `mongodb+srv://jeumulti:ifocop@cluster0-lfexs.mongodb.net/jeu-back`;
 // const dbUrl = `mongodb://localhost:27017/jeu-back`;
+
 /**
  *  Middlewares 
  */
@@ -69,23 +70,23 @@ app.use(function (req, res, next) {
   interpolations = {};
   next();
 });
-
 app.use(function (req, res, next) {
   // contrôler la session
   if (req.url === '/login' || req.url === '/register') {
 
     if (req.session.pseudo) {
-      interpolations.pseudo = req.session.pseudo;
-      res.render('game', interpolations);
-      return;
-    }
+      req.session.destroy();
+      res.clearCookie('sid');
+      interpolations.msgInfo = "Tu as dû quitté ta session comme un.e sauvage, elle a été supprimée. Tu peux te reconnecter ;).";
+      res.render('login', interpolations);
+    };
 
   }
   next();
 });
 
-app.all('/', function (req, res, next) {
-  res.render('login', interpolations);
+app.all('/', function (req, res) {
+  res.render('login');
 });
 
 
@@ -93,11 +94,7 @@ app.all('/', function (req, res, next) {
  *   Connexion d'un utilisateur connu en base
  *================================================*/
 
-app.get('/login', function (req, res, next) {
-  if (req.session.pseudo) {
-    res.render('game', interpolations);
-    return;
-  }
+app.get('/login', function (req, res) {
   res.render('login', interpolations);
 });
 
@@ -122,17 +119,14 @@ app.post('/login', function (req, res) {
       res.render('login', interpolations);
     }
   });
-})
+});
 
 /*=========================================================*
  *   Enregistrement et connexion d'un nouvel utilisateur
  *=========================================================*/
 
 app.get('/register', function (req, res, next) {
-  if (req.session.pseudo) {
-    res.redirect(301, '/game');
-    return;
-  }
+  
   res.render('register', interpolations);
 });
 
@@ -682,9 +676,12 @@ ioServer.on("connect", function (ioSocket) {
     const roomName = ioSocket.player.roomName;
     // recherche de la salle dans la liste
     getRoomAsync(lists.rooms, roomName).then((room) => {
-      const message = `${tool.shortTime(Date.now())} <b>${ioSocket.player.pseudo}</b> ${messages.closingRoom}`;
+
+      const msgPart1 = `${tool.shortTime(Date.now())}`;
+      const msgPart2 = `<b>${ioSocket.player.pseudo}</b> ${messages.closingRoom}`;
+      ioSocket.in(roomName).emit('msgGames', msgPart2);
       // Fermeture de la salle
-      closeRoom(room, lists, message, ioSocket.player);
+      closeRoom(room, lists, msgPart1 + msgPart2, ioSocket.player);
 
     }).catch((e) => {
       console.error(e);
@@ -697,14 +694,14 @@ ioServer.on("connect", function (ioSocket) {
    *      Déconnection d'un joueur
    *===========================================================================*/
 
-  ioSocket.on("disconnect", function () {
-
-    
+  ioSocket.on('disconnect', function () {
+    console.log('>disconnect avant', ioSocket.player, lists.connections)
     // le joueur est retiré de la liste des joueurs connectés
-    const indexofConnection = roomFct.getIndexof.connection(lists.connections, ioSocket.player.connectId);
+    const indexofConnection = roomFct.getIndexof.connection(lists.connections, ioSocket.id);
     lists.connections.splice(indexofConnection, 1);
     // tous les joueurs sont informés de la déconnexion
     const message = `${tool.shortTime(Date.now())} <b>${ioSocket.player.pseudo}</b> ${messages.disconnect}`;
+    console.log('>disconnect après', lists.connections)
     ioServer.emit('updateConnections', lists.connections, message, ioSocket.player);
 
     //le joueur est dans une salle
@@ -720,7 +717,6 @@ ioServer.on("connect", function (ioSocket) {
           // ce n'est pas sa salle => il faut l'en retirer
           const indexofPlayer = roomFct.getIndexof.player(room.players, ioSocket.player.pseudo);
           room.players.splice(indexofPlayer, 1);
-
           // réafficher aux joueurs de la salle sa mise à jour             
           const message = `<b>${ioSocket.player.pseudo}</b> ${messages.leftRoom}.`;
           ioServer.in(room.name).emit('playerLeaveRoom', room.players, message);
