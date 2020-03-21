@@ -8,54 +8,56 @@ html(lang="en")
         link(rel="stylesheet", href="css/style.css") 
 
     body.bg-secondary.text-white
-      include includes/navbar.pug       
+      include includes/navbar-jeu.pug       
 
-      #gameIntro.row.justify-content-center.m-5
-        div.col-8
-          - var sessionOtherId = otherId
-          .jumbotron.text-dark
-            .h4 Bonjour #{pseudo}!            
-            p.lead.text-justify.mt-3 Ton anglais technique déchire ? Teste-le avec un quiz contre d'autres joueurs. Le premier qui trouve le mot répondant à la définition proposée marque 1 point. 
-            p.lead.text-justify.mt-3 Et qui c'est-qui gagne ? Celui qui a le plus de points après 5 tours (10 dans une partie avec plus de 2 joueurs).
-            form(id="playForm" method="POST")
-              input.invisible(type="text", name="sessionOtherId", id="sessionOtherId" value=sessionOtherId) 
-              button.btn.btn-info.mt-3(type="submit") On y va? 
+      .container-fluid
+        #gameIntro.row.justify-content-center.m-5
+          div.col-8
+            - var sessionOtherId = otherId
+            .jumbotron.text-dark
+              .h4 Bonjour #{pseudo}!            
+              p.lead.text-justify.mt-3 Ton anglais technique déchire ? Teste-le avec  un quiz contre d'autres joueurs. Le premier qui trouve le mot répondant  à la définition proposée marque 1 point. 
+              p.lead.text-justify.mt-3 Et qui c'est-qui gagne ? Celui qui a le plus de  points après 5 tours (10 dans une partie avec plus de 2 joueurs).
+              form(id="playForm" method="POST")
+                input.invisible(type="text", name="sessionOtherId",   id="sessionOtherId" value=sessionOtherId) 
+                button.btn.btn-info.mt-3(type="submit") On y va? 
 
-      #game.row.mt-5.mx-3        
-        .col.p-3                
-          .h4.mt-3 Parties jouées  
-          #divGames.border.border-info.p-3
-            table#gamesList
-          .h4.mt-3 Joueurs connectés 
-          .col-8
-            #connections.border.border-info.rounded-lg.p-3 
-          .h4.mt-3 Activité
-          .col-8
-            #tracking.border.border-info.rounded-lg.p-3 
-        
-        #gameOverview.col.mt-5.mx-3                            
-          .h4 Salles de jeu en cours
-          .col-8
-            #roomsList.border.border-info.rounded-lg.p-3
-          button.btn.btn-success.m-3(id="initGameBtn") Initier une partie
-          p.text-muted Initie une partie (cela crée une salle) ou rejoins une salle accessible en cliquant dessus
-          .h4#owner
-          .col
-            #room.border.border-info.rounded-lg.p-3 
-              #roomButtons  
-                  button.btn.btn-success.mx-3(type="submit", id="startGameBtn")   Démarrer
-                  button.btn.btn-warning.mx-3(type="submit", id="closeRoomBtn") Fermer
-                  button.btn.btn-warning.mx-3(type="submit", id="leaveRoomBtn")   Quitter            
-              table#roomPlayers.mt-3
-              p#msgRoom 
+        #game.row.mt-5.mx-3        
+          .col.p-3                
+            .h4.mt-3 Parties jouées  
+            #divGames.border.border-info.p-3
+              table#gamesList
+            .h4.mt-3 Joueurs connectés 
+            .col-8
+              #connections.border.border-info.rounded-lg.p-3 
+            .h4.mt-3 Activité
+            .col-8
+              #tracking.border.border-info.rounded-lg.p-3 
 
-              #quiz
-                p#word.mt-3                        
-                form#answerForm.form-inline
-                    label Ta réponse 
-                    input.form-control.mx-3.col-sm-3(type="text", name="answer"   onfocus="this.value=''" required)
-                    button.btn.btn-info.mx-3.col-sm-3(type="submit") Envoyer
-                p#msgAnswer.mt-3  
+          #gameOverview.col.mt-5.mx-3                            
+            .h4 Salles de jeu en cours
+            .col-8
+              #roomsList.border.border-info.rounded-lg.p-3
+            button.btn.btn-success.m-3(id="initGameBtn") Initier une partie
+            p.text-muted Initie une partie (cela crée une salle) ou rejoins une salle   accessible en cliquant dessus
+            .h4#owner
+            .col
+              #room.border.border-info.rounded-lg.p-3 
+                #roomButtons  
+                    button.btn.btn-success.mx-3(type="submit", id="startGameBtn")     Démarrer
+                    button.btn.btn-warning.mx-3(type="submit", id="closeRoomBtn")   Fermer
+                    button.btn.btn-warning.mx-3(type="submit", id="leaveRoomBtn")     Quitter            
+                table#roomPlayers.mt-3
+                p#msgRoom 
+
+                #quiz
+                  p#word.mt-3                        
+                  form#answerForm.form-inline
+                      label Ta réponse 
+                      input.form-control.mx-3.col-sm-3(type="text", name="answer"     onfocus="this.value=''" required)
+                      button.btn.btn-info.mx-3.col-sm-3(type="submit") Envoyer
+                  p#msgAnswer.mt-3  
+    
     script(src="/socket.io/socket.io.js")
     script(src="../js/game.js")
     script(src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.slim.min.js"

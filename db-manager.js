@@ -2,8 +2,8 @@
 
 const MongoClient = require('mongodb').MongoClient;
 
-//const urlDb = 'mongodb://localhost:27017';
-const urlDb = 'mongodb+srv://jeumulti:ifocop@cluster0-lfexs.mongodb.net';
+const urlDb = 'mongodb://localhost:27017';
+//const urlDb = 'mongodb+srv://jeumulti:ifocop@cluster0-lfexs.mongodb.net';
 const dbName = 'jeu-back';
 const connectDb = (callback) => {
   console.log('> connectDb');

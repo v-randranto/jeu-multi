@@ -5,25 +5,30 @@ html(lang="fr")
         title S'enregistrer   
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
         link(rel="stylesheet", href="css/style.css")        
+    
     body.bg-secondary
+        
         - var pseudoValue = '';
         - if (pseudo) pseudoValue = pseudo;
-        .container
-            #register.border.border-info.offset-sm-3.col-sm-6.offset-md-4.col-md-4.p-3     
-                form(id="registerForm" action="/register", method="POST")
-                    .form-group
-                        label Pseudo
-                        input.form-control(type="text", name="pseudo"  value=pseudoValue, onfocus="this.value=''", required, minlength=3, maxlength=15)
-                    .form-group
-                        label Mot de passe
-                        input.form-control(type="password", name="pwd",    onfocus="this.value=''", required, minlength=4, maxlength=8)
-                    .form-group
-                        label Confirmation mot de passe
-                        input.form-control(type="password", name="confirm", required, minlength=4, maxlength=8)
-                    button.btn.btn-info(type="submit") Validez
-                    p.text-danger=msgError  
-                p.text-right.p-3  
-                    a.connectLink(href="/login") On se connait déjà? 
 
+        include includes/navbar-connexion.pug
+        .container
+            .offset-sm-3.col-sm-6.offset-md-4.col-md-4
+                #register.border.border-info.p-3     
+                    form(id="registerForm" action="/register", method="POST")
+                        .form-group
+                            label Pseudo
+                            input.form-control(type="text", name="pseudo"   value=pseudoValue, onfocus="this.value=''", required,    minlength=3, maxlength=15)
+                        .form-group
+                            label Mot de passe
+                            input.form-control(type="password", name="pwd",     onfocus="this.value=''", required, minlength=4, maxlength=8)
+                        .form-group
+                            label Confirmation mot de passe
+                            input.form-control(type="password", name="confirm",     required, minlength=4, maxlength=8)
+                        button.btn.btn-info(type="submit") Validez
+                        p.text-danger=msgError  
+                    p.text-right.p-3  
+                        a.connectLink(href="/login") On se connait déjà? 
+    
         script(src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous")
         script(src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous")

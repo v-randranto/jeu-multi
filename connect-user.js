@@ -5,8 +5,8 @@ const uuidv4 = require('uuid/v4');
 
 const sessionInfos = function (parameters) {
   parameters.session.pseudo = parameters.body.pseudo;
-  parameters.session.otherId = uuidv4();
-  parameters.interpolations.otherId = parameters.session.otherId;
+  parameters.session.uuid = uuidv4();
+  parameters.interpolations.uuid = parameters.session.uuid;
 }
 
 exports.connect = function (parameters) {

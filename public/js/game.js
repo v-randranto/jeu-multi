@@ -174,8 +174,8 @@ window.addEventListener("DOMContentLoaded", function () {
      * TODO: commentaires
      **********************************************************/
 
-    var ioSocket = io('https://jeu-multi-vra.herokuapp.com/', function () {
-    // var ioSocket = io('localhost:3000/', function () {
+    // var ioSocket = io('https://jeu-multi-vra.herokuapp.com/', function () {
+    var ioSocket = io('localhost:3000/', function () {
     });
 
     /*=============================================================*

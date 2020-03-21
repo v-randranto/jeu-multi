@@ -17,15 +17,17 @@ const tool = require('./tools');
 const connectUser = require('./connect-user');
 const roomFct = require('./room-functions');
 const dbQuery = require('./db-manager');
-const titres = require('./titres');
 
 const app = express();
 /* Template engine */
 app.set('view engine', 'pug');
+app.use('/css',express.static(__dirname + '/public/css'));
+app.use('/img',express.static(__dirname + '/public/img'));
+app.use('/js',express.static(__dirname + '/public/js'));
 
 const PORT = process.env.PORT || 3000;
-const dbUrl = `mongodb+srv://jeumulti:ifocop@cluster0-lfexs.mongodb.net/jeu-back`;
-//const dbUrl = `mongodb://localhost:27017/jeu-back`;
+// const dbUrl = `mongodb+srv://jeumulti:ifocop@cluster0-lfexs.mongodb.net/jeu-back`;
+const dbUrl = `mongodb://localhost:27017/jeu-back`;
 /**
  *  Middlewares 
  */
@@ -175,7 +177,6 @@ app.all('/logout', function (req, res) {
  *============================================*/
 
 app.use(function (req, res, next) {
-  interpolations = titres.erreur(res.statusCode);
   if (res.statusCode != 403 && res.statusCode != 503) {
     res.statusCode = 404;
   }
@@ -198,21 +199,21 @@ process.on('uncaughtException', function (e) {
 
 const ioServer = require("socket.io")(HTTPServer);
 
+// liste des parties, salles et joueurs connectés
 const lists = {
   games: [],
   rooms: [],
   connections: []
 };
 
-
+// Données d'une partie
 const gameConfig = {
   nbMaxPlayers: 4,
   nbMinPlayers: 2,
   nbMaxRounds: 10,
   nbMaxAttempts: 2,
   definitionDelay: 2000,
-  closingDelay: 2500,
-  timer: 15
+  closingDelay: 2500
 };
 
 
@@ -226,7 +227,6 @@ const Room = function (socketId, pseudo, players) {
   this.creationDate = Date.now();
   this.nbMaxAttempts = 0;
   this.nbAttempts = 0;
-
 }
 
 const messages = {
@@ -252,6 +252,7 @@ const messages = {
   winner: ` est un.e <b>WINNER</b>!`
 }
 
+// réinitialisation des données des joueurs après la fin d'une partie
 const reinitialisePlayers = function (players) {
   for (var i = 0; players[i]; i++) {
     const player = players[i];
@@ -260,6 +261,7 @@ const reinitialisePlayers = function (players) {
   }
 }
 
+// fermeture d'une salle de jeu => mise à jour des joueurs et des listes affichées
 const closeRoom = (room, lists, message, player) => {
   setTimeout(() => {
     ioServer.in(room.name).emit('resetRoom');
@@ -276,16 +278,16 @@ const closeRoom = (room, lists, message, player) => {
 
 }
 
+// fonction de recherche d'une salle dans la liste
 const asyncRoomCall = async function (rooms, roomName) {
   return roomFct.manageRoom.getRoom(rooms, roomName);
 }
-
 const getRoomAsync = async function (rooms, roomName) {
   let room = await asyncRoomCall(rooms, roomName);
   return room;
 }
 
-
+// fonction de lecture des 10 dernières parties en base
 const getGames = async function () {
 
   await Game.find().sort({ startDate: -1 }).limit(10).then(
@@ -315,6 +317,7 @@ const getGames = async function () {
   });
 }
 
+// fonction màj en base d'une partie terminée
 const updateGames = async function (game) {
   await game.save();
   await getGames().then(() => {
@@ -335,13 +338,13 @@ ioServer.on("connect", function (ioSocket) {
   /*========================================================================*
   *         ...il veut jouer
   *---------------------------------------------------------------------------
-  * On accède à la liste des dernières parties jouées pour lui afficher.
-  * On accède également à sa session grâce à l'idSession transmis par le client
+  * On accède à la liste des dernières parties jouées pour la lui afficher.
+  * On accède également à sa session grâce à l'uuid transmis par le client
   * et on récupère son pseudo.
   * démarré ou que le nb max de joueurs n'est pas atteint.
   *========================================================================*/
 
-  ioSocket.on("addPlayer", function (sessionOtherId) {
+  ioSocket.on("addPlayer", function (uuidSession) {
     // Récupérer les parties en base
     if (!lists.games.length) {
       getGames().then(() => {
@@ -354,7 +357,7 @@ ioServer.on("connect", function (ioSocket) {
     // Chercher en base la session avec l'id fourni par le client
     dbQuery.find({
       collectionName: 'sessions',
-      filter: { "session": { $regex: sessionOtherId } },
+      filter: { "session": { $regex: uuidSession } },
       sort: {},
       limit: 0,
       done: (data, err) => {
@@ -368,7 +371,7 @@ ioServer.on("connect", function (ioSocket) {
             const sessionFound = JSON.parse(data[0].session);
 
             ioSocket.player = {
-              idSession: sessionFound.otherId,
+              idSession: sessionFound.uuid,
               pseudo: sessionFound.pseudo,
               bgColor: '#' + (Math.random() * 0xFFFFFF << 0).toString(16),
               score: 0
