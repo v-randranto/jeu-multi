@@ -23,11 +23,10 @@ const getIndexof = {
     room: function (roomsList, roomName) {
         for (let i = 0; roomsList[i]; i++) {
             if (roomsList[i].name === roomName) {
-                console.log('trouvé :)');
                 return i;
             }
         }
-        console.log('pas trouvé :(');
+        console.error('room not found :(');
         return -1;
     }
 };
@@ -44,11 +43,11 @@ const manageRoom = {
         }
     },
 
-    sendWordDefinition: function (room) {
-        room.nbRoundsPlayed++; 
+    sendWordDefinition: function (room) {        
         room.nbAttempts = 0;
-        room.quizWord = room.selectedWords[room.nbRoundsPlayed - 1].word;
-        room.quizDefinition = room.selectedWords[room.nbRoundsPlayed - 1].definition;
+        room.quizWord = room.selectedWords[room.nbRoundsPlayed].word;
+        room.quizDefinition = room.selectedWords[room.nbRoundsPlayed].definition;
+        room.nbRoundsPlayed++; 
         // Envoyer la question à tous les joueurs de la salle
         return `<b>Tour ${room.nbRoundsPlayed} / 10 - ${room.quizWord.length} lettres : <i>${room.quizDefinition}</i></b>`;
     },
@@ -70,7 +69,6 @@ const manageRoom = {
 
         // fonction récursive qui trouve le joueur d'une liste avec le meilleur score 
         const getBestPlayer = function (players) {
-            console.log('players :', players)
             let bestScore = 0;
             let bestPlayer;
             for (let i = 0; players[i]; i++) {

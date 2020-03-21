@@ -17,9 +17,9 @@ html(lang="en")
             .jumbotron.text-dark
               .h4 Bonjour #{pseudo}!            
               p.lead.text-justify.mt-3 Ton anglais technique déchire ? Teste-le avec  un quiz contre d'autres joueurs. Le premier qui trouve le mot répondant  à la définition proposée marque 1 point. 
-              p.lead.text-justify.mt-3 Et qui c'est-qui gagne ? Celui qui a le plus de  points après 5 tours (10 dans une partie avec plus de 2 joueurs).
+              p.lead.text-justify.mt-3 Et qui c'est-qui gagne ? Celui qui marque le plus de points après 10 tours.
               form(id="playForm" method="POST")
-                input.invisible(type="text", name="sessionOtherId",   id="sessionOtherId" value=sessionOtherId) 
+                input.invisible(type="text", name="uuid",   id="uuid" value=uuid) 
                 button.btn.btn-info.mt-3(type="submit") On y va? 
 
         #game.row.mt-5.mx-3        
@@ -44,9 +44,9 @@ html(lang="en")
             .col
               #room.border.border-info.rounded-lg.p-3 
                 #roomButtons  
-                    button.btn.btn-success.mx-3(type="submit", id="startGameBtn")     Démarrer
+                    button.btn.btn-success.mx-3(type="submit", id="startGameBtn") Démarrer
                     button.btn.btn-warning.mx-3(type="submit", id="closeRoomBtn")   Fermer
-                    button.btn.btn-warning.mx-3(type="submit", id="leaveRoomBtn")     Quitter            
+                    button.btn.btn-warning.mx-3(type="submit", id="leaveRoomBtn") Quitter            
                 table#roomPlayers.mt-3
                 p#msgRoom 
 

@@ -174,8 +174,8 @@ window.addEventListener("DOMContentLoaded", function () {
      * TODO: commentaires
      **********************************************************/
 
-    // var ioSocket = io('https://jeu-multi-vra.herokuapp.com/', function () {
-    var ioSocket = io('localhost:3000/', function () {
+    var ioSocket = io('https://jeu-multi-vra.herokuapp.com/', function () {
+    // var ioSocket = io('localhost:3000/', function () {
     });
 
     /*=============================================================*
@@ -194,7 +194,7 @@ window.addEventListener("DOMContentLoaded", function () {
         htmlPlayForm.addEventListener('submit', function (event) {
             event.preventDefault();
             // envoi du 2ème id de la session
-            ioSocket.emit('addPlayer', htmlPlayForm.sessionOtherId.value);
+            ioSocket.emit('addPlayer', htmlPlayForm.uuid.value);
         });
 
         /*--------------------------------------------------*
