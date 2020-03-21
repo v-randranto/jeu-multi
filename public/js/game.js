@@ -23,6 +23,7 @@ var htmlGameOverview = document.getElementById('gameOverview');
 var htmlRoom = document.getElementById('room');
 var htmlRoomPlayers = document.getElementById('roomPlayers');
 var htmlRoomButtons = document.getElementById('roomButtons');
+var htmlGamesMsg = document.getElementById('msgGames');
 var htmlRoomMsg = document.getElementById('msgRoom');
 var htmlQuiz = document.getElementById('quiz');
 var htmlAnswserForm = document.getElementById('answerForm');
@@ -86,7 +87,7 @@ var updateRoomsList = function (roomsList, ioSocketId, message) {
         var htmlItem = document.createElement('li');
         // salle accessible affichée en vert sinon rouge
         var status = room.accessible ? 'accessible' : 'verrouillée';
-        htmlItem.innerHTML = `<span ${getTextStyle(room.accessible)}>Salle "${room.name}" ${status}</span>`;
+        htmlItem.innerHTML = `<span ${getTextStyle(room.accessible)}>Salle '${room.name}' ${status}</span>`;
         // Les salles accessibles sont cliquables mais le taulier ne doit pas pouvoir cliquer sa salle
         if (room.accessible) {
             if (ioSocketId !== room.socketId) {
@@ -109,7 +110,7 @@ var updateConnections = function (connections, message, playerIt) {
     for (var i = 0; connections[i]; i++) {
 
         var player = connections[i].player;
-        var status = !player.roomName ? `disponible.` : `dans la salle "${player.roomName}"`;
+        var status = !player.roomName ? `disponible.` : `dans la salle '${player.roomName}'`;
         // TODO refactoring
         var htmlConnection = document.createElement('div');
         var htmlAvatar = document.createElement('span');
@@ -167,7 +168,7 @@ var resetRoom = function () {
     document.getElementById('msgAnswer').innerHTML = '';
 }
 
-window.addEventListener("DOMContentLoaded", function () {
+window.addEventListener('DOMContentLoaded', function () {
 
     /***********************************************************
      * CONNEXION SOCKET.IO 
@@ -182,11 +183,11 @@ window.addEventListener("DOMContentLoaded", function () {
      *        Connexion avec le serveur socket.io établie
      *=============================================================*/
 
-    ioSocket.on("connect", function () {
+    ioSocket.on('connect', function () {
 
         htmlLogoutForm.addEventListener('submit', function () {
             event.preventDefault();
-            ioSocket.emit('disconnect');
+            ioSocket.emit('logout');
             htmlLogoutForm.submit();
         });
 
@@ -232,7 +233,7 @@ window.addEventListener("DOMContentLoaded", function () {
                     var htmlRoom = htmlClickableRooms[i];
                     htmlRoom.addEventListener('click', function () {
                         // le clic permet au joueur de rejoindre une salle dont le nom est dans l'id du tag 'li'
-                        ioSocket.emit("joinRoom", this.id);
+                        ioSocket.emit('joinRoom', this.id);
                         htmlInitGameBtn.disabled = true;
                     });
                 }
@@ -254,14 +255,14 @@ window.addEventListener("DOMContentLoaded", function () {
         *---------------------------------------------------*/
 
         // màj liste des connections envoyée par le serveur
-        ioSocket.on("updateConnections", function (connections, message, player) {
+        ioSocket.on('updateConnections', function (connections, message, player) {
             // à ajouter à la liste des joueurs connectés
             htmlConnections.innerHTML = 'Aucune salle.';
             updateConnections(connections, message, player);
         });
 
         // session expirée - à gérer
-        ioSocket.on("sessionNotFound", function () {
+        ioSocket.on('sessionNotFound', function () {
             //TODO déconnecter sa session                 
         });
 
@@ -271,17 +272,17 @@ window.addEventListener("DOMContentLoaded", function () {
 
         // Le joueur initie une salle
         htmlInitGameBtn.addEventListener('click', function () {
-            ioSocket.emit("openRoom");
+            ioSocket.emit('openRoom');
             // désactivation du bouton d'initialisation d'une partie
             htmlInitGameBtn.disabled = true;
         });
 
-        ioSocket.on("msgGames", function (message) {
-            document.getElementById('msgGames').innerHTML = message;
+        ioSocket.on('msgRoom', function (message) {
+            htmlRoomMsg.innerHTML = message;
         });
 
         // Afficher une salle
-        ioSocket.on("displayRoom", function (room, create, message) {
+        ioSocket.on('displayRoom', function (room, create, message) {
 
             if (create || ioSocket.id !== room.socketId) {
                 htmlRoom.style.visibility = 'visible';
@@ -370,16 +371,16 @@ window.addEventListener("DOMContentLoaded", function () {
         });
 
         // Envoi de la réponse du joueur au serveur
-        htmlAnswserForm.addEventListener("submit", function (event) {
+        htmlAnswserForm.addEventListener('submit', function (event) {
             event.preventDefault();
-            ioSocket.emit("answer", this.answer.value);
+            ioSocket.emit('answer', this.answer.value);
             this.answer.focus();
             this.answer.value = '';
         });
 
-        // Afficher le message du serveur dans la salle
-        ioSocket.on('msgRoom', function (message) {
-            htmlRoomMsg.innerHTML = message;
+        // Afficher le message du serveur 
+        ioSocket.on('msgGames', function (message) {
+            htmlGamesMsg.innerHTML = message;
         });
 
         // Afficher la réponse d'un joueur (verte si correcte, rouge si incorrecte)
@@ -392,6 +393,7 @@ window.addEventListener("DOMContentLoaded", function () {
             var htmlAnswers = document.getElementById('msgAnswer')
             var htmlLastAnswer = htmlAnswers.childNodes[0];
             var htmlNewTrack = document.createElement('div')
+
             if (player) {
                 var htmlAvatar = document.createElement('span');
                 htmlAvatar.className = 'avatar';
@@ -401,14 +403,8 @@ window.addEventListener("DOMContentLoaded", function () {
 
             var htmlMessage = document.createElement('span');
             htmlNewTrack.appendChild(htmlMessage);
-
             htmlMessage.innerHTML = `<span ${getTextStyle(status)}>${message}</span>`;
-
             htmlAnswers.insertBefore(htmlNewTrack, htmlLastAnswer);
-
-
-
-
         });
 
         // Afficher le classement de la salle
