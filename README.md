@@ -1,5 +1,5 @@
 # Quiz multi-joueur
-2ème devoir de la formation IFOCOP (cours mi-oct 2019 / mi-février 2020) : réaliser un jeu multi-jouers.
+2ème devoir de la formation IFOCOP (cours mi-oct 2019 / mi-février 2020) : réaliser un jeu multi-joueurs.
 
 Pour jouer c'est sur https://jeu-multi-vra.herokuapp.com.
 
